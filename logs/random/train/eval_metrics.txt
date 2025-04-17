@@ -1,1 +1,1 @@
-[Step 0] AvgLen: 73.50, AvgRew: 159.75, StdRew: 0.67, Time/Step: 0.0000
+[Step 0] AvgLen: 89.00, AvgRew: 167.49, StdRew: 14.60, Time/Step: 0.0000
