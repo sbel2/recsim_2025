@@ -5,33 +5,33 @@ import torch.optim as optim
 from gym import spaces
 
 
-class ResponseAdapter:
-    def __init__(self, input_response_space):
-        self._input_response_space = input_response_space
-        self._single_response_space = input_response_space.spaces[0]
-        self._response_names = list(self._single_response_space.spaces.keys())
-        self._response_shape = (len(input_response_space.spaces),
-                                len(self._response_names))
-        self._response_dtype = np.float32
+# class ResponseAdapter:
+#     def __init__(self, input_response_space):
+#         self._input_response_space = input_response_space
+#         self._single_response_space = input_response_space.spaces[0]
+#         self._response_names = list(self._single_response_space.spaces.keys())
+#         self._response_shape = (len(input_response_space.spaces),
+#                                 len(self._response_names))
+#         self._response_dtype = np.float32
 
-    @property
-    def response_names(self):
-        return self._response_names
+#     @property
+#     def response_names(self):
+#         return self._response_names
 
-    @property
-    def response_shape(self):
-        return self._response_shape
+#     @property
+#     def response_shape(self):
+#         return self._response_shape
 
-    @property
-    def response_dtype(self):
-        return self._response_dtype
+#     @property
+#     def response_dtype(self):
+#         return self._response_dtype
 
-    def encode(self, responses):
-        tensor = np.zeros(self._response_shape, dtype=self._response_dtype)
-        for i, response in enumerate(responses):
-            for j, key in enumerate(self.response_names):
-                tensor[i, j] = response[key]
-        return tensor
+#     def encode(self, responses):
+#         tensor = np.zeros(self._response_shape, dtype=self._response_dtype)
+#         for i, response in enumerate(responses):
+#             for j, key in enumerate(self.response_names):
+#                 tensor[i, j] = response[key]
+#         return tensor
 
 
 class ObservationAdapter:

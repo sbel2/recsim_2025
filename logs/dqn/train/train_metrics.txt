@@ -1,0 +1,5 @@
+[Step 86] AvgLen: 86.00, AvgRew: 154.83, StdRew: 0.00, Time/Step: 0.0012
+[Step 172] AvgLen: 86.00, AvgRew: 138.52, StdRew: 0.00, Time/Step: 0.0017
+[Step 250] AvgLen: 78.00, AvgRew: 163.14, StdRew: 0.00, Time/Step: 0.0021
+[Step 319] AvgLen: 69.00, AvgRew: 155.14, StdRew: 0.00, Time/Step: 0.0018
+[Step 406] AvgLen: 87.00, AvgRew: 141.24, StdRew: 0.00, Time/Step: 0.0022

@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 from gym import Env, spaces
-from helper.environment import SingleUserEnvironment, MultiUserEnvironment
+from helper.environment import MultiUserEnvironment
 
 
 def _dummy_metrics_aggregator(responses, metrics, info):
