@@ -61,27 +61,6 @@ class IEvVideo(document.AbstractDocument):
         return spaces.Box(shape=(cls.NUM_FEATURES,), dtype=np.float32, low=-1.0, high=1.0)
 
 
-# class IEvVideoSampler(document.AbstractDocumentSampler):
-#     def __init__(self, doc_ctor=IEvVideo, min_feature_value=-1.0, max_feature_value=1.0,
-#                  video_length_mean=4.3, video_length_std=1.0, **kwargs):
-#         super().__init__(doc_ctor, **kwargs)
-#         self._doc_count = 0
-#         self._min_feature_value = min_feature_value
-#         self._max_feature_value = max_feature_value
-#         self._video_length_mean = video_length_mean
-#         self._video_length_std = video_length_std
-
-#     def sample_document(self):
-#         doc_features = {
-#             'doc_id': self._doc_count,
-#             'features': self._rng.uniform(self._min_feature_value, self._max_feature_value, self.get_doc_ctor().NUM_FEATURES),
-#             'video_length': min(self._rng.normal(self._video_length_mean, self._video_length_std), self.get_doc_ctor().MAX_VIDEO_LENGTH),
-#             'quality': 1.0
-#         }
-#         self._doc_count += 1
-#         return self._doc_ctor(**doc_features)
-
-
 class UtilityModelVideoSampler(document.AbstractDocumentSampler):
     def __init__(self, doc_ctor=IEvVideo, min_utility=-3.0, max_utility=3.0, video_length=4.0, **kwargs):
         super().__init__(doc_ctor, **kwargs)
@@ -149,33 +128,6 @@ class IEvUserState(user.AbstractUserState):
     @classmethod
     def observation_space(cls):
         return spaces.Box(shape=(cls.NUM_FEATURES,), dtype=np.float32, low=-1.0, high=1.0)
-
-# class IEvUserDistributionSampler(user.AbstractUserSampler):
-#     """Class to sample users by a hardcoded distribution."""
-
-#     def __init__(self, user_ctor=IEvUserState, **kwargs):
-#         super().__init__(user_ctor=user_ctor, **kwargs)
-
-#     def sample_user(self):
-#         features = {
-#             'user_interests': self._rng.uniform(-1.0, 1.0, self.get_user_ctor().NUM_FEATURES),
-#             'time_budget': 30.0,
-#             'score_scaling': 0.05,
-#             'attention_prob': 0.9,
-#             'no_click_mass': 1.0,
-#             'keep_interact_prob': self._rng.beta(1, 3, 1),
-#             'min_doc_utility': 0.1,
-#             'user_update_alpha': 0.0,
-#             'watched_videos': set(),
-#             'impressed_videos': set(),
-#             'liked_videos': set(),
-#             'step_penalty': 1.0,
-#             'min_normalizer': -1.0,
-#             'user_quality_factor': 1.0,
-#             'document_quality_factor': 1.0
-#         }
-#         return self._user_ctor(**features)
-
 
 class UtilityModelUserSampler(user.AbstractUserSampler):
     """Class that samples users for utility model experiment."""
