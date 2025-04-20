@@ -17,3 +17,25 @@ class EpsilonGreedyBandit:
         n = self.counts[action]
         value = self.values[action]
         self.values[action] += (reward - value) / n
+
+class BanditAgentWrapper:
+    def __init__(self, n_arms):
+        self.bandit = EpsilonGreedyBandit(n_arms)
+
+    def begin_episode(self, observation):
+        action = self.bandit.select_action(observation)
+        return [action]  # assume slate format
+
+    def step(self, reward, observation):
+        action = self.bandit.select_action(observation)
+        self.bandit.update(action, reward)
+        return [action]
+
+    def end_episode(self, reward, observation=None):
+        pass  # bandit doesn't need this
+
+    def bundle(self):
+        return None
+
+    def unbundle(self, data):
+        return False
