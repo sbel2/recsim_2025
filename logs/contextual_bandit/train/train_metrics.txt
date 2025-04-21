@@ -1,0 +1,10 @@
+[Step 104] AvgLen: 104.00, AvgRew: 162.81, StdRew: 0.00, Time/Step: 0.0002
+[Step 231] AvgLen: 127.00, AvgRew: 126.19, StdRew: 0.00, Time/Step: 0.0002
+[Step 430] AvgLen: 99.50, AvgRew: 146.83, StdRew: 1.00, Time/Step: 0.0002
+[Step 656] AvgLen: 113.00, AvgRew: 132.75, StdRew: 7.25, Time/Step: 0.0002
+[Step 780] AvgLen: 124.00, AvgRew: 126.66, StdRew: 0.00, Time/Step: 0.0002
+[Step 978] AvgLen: 99.00, AvgRew: 158.35, StdRew: 5.85, Time/Step: 0.0002
+[Step 1089] AvgLen: 111.00, AvgRew: 148.00, StdRew: 0.00, Time/Step: 0.0002
+[Step 1189] AvgLen: 100.00, AvgRew: 149.84, StdRew: 0.00, Time/Step: 0.0002
+[Step 1397] AvgLen: 104.00, AvgRew: 159.49, StdRew: 6.13, Time/Step: 0.0002
+[Step 1583] AvgLen: 93.00, AvgRew: 142.97, StdRew: 6.88, Time/Step: 0.0002
