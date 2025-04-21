@@ -2,3 +2,9 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+
+# Ignore system files
+.DS_Store
+**/.DS_Store
+
+logs/
