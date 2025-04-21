@@ -5,12 +5,10 @@ from helper.environment import MultiUserEnvironment
 
 
 def _dummy_metrics_aggregator(responses, metrics, info):
-    print("[rec_gym.py] _dummy_metrics_aggregator() called")
     return metrics
 
 
 def _dummy_metrics_writer(metrics, add_summary_fn):
-    print("[rec_gym.py] _dummy_metrics_writer() called")
     pass
 
 
@@ -24,7 +22,6 @@ class RecSimGymEnv(Env):
         metrics_aggregator=_dummy_metrics_aggregator,
         metrics_writer=_dummy_metrics_writer,
     ):
-        print("[rec_gym.py] RecSimGymEnv.__init__() called")
         self._environment = raw_environment
         self._reward_aggregator = reward_aggregator
         self._metrics_aggregator = metrics_aggregator
@@ -33,17 +30,15 @@ class RecSimGymEnv(Env):
 
     @property
     def environment(self):
-        print("[rec_gym.py] environment property accessed")
         return self._environment
 
     @property
     def game_over(self):
-        print("[rec_gym.py] game_over property accessed")
         return False
 
     @property
     def action_space(self):
-        print("[rec_gym.py] action_space property accessed")
+        """Returns action space: slate of document indices."""
         base_space = spaces.MultiDiscrete(
             self._environment.num_candidates * np.ones((self._environment.slate_size,), dtype=int)
         )
@@ -53,7 +48,7 @@ class RecSimGymEnv(Env):
 
     @property
     def observation_space(self):
-        print("[rec_gym.py] observation_space property accessed")
+        """Returns observation space with user, document, and response info."""
         if isinstance(self._environment, MultiUserEnvironment):
             user_obs_space = self._environment.user_model[0].observation_space()
             response_obs_space = self._environment.user_model[0].response_space()
@@ -70,7 +65,7 @@ class RecSimGymEnv(Env):
         })
 
     def step(self, action):
-        print(f"[rec_gym.py] step() called with action: {action}")
+        """Executes one step of the environment."""
         user_obs, doc_obs, responses, done = self._environment.step(action)
 
         if isinstance(self._environment, MultiUserEnvironment):
@@ -90,11 +85,10 @@ class RecSimGymEnv(Env):
         reward = self._reward_aggregator(responses)
         info = self.extract_env_info()
 
-        print(f"[rec_gym.py] step() returning reward: {reward}, done: {done}")
         return obs, reward, done, info
 
     def reset(self):
-        print("[rec_gym.py] reset() called")
+        """Resets the environment."""
         user_obs, doc_obs = self._environment.reset()
         return {
             "user": user_obs,
@@ -103,33 +97,25 @@ class RecSimGymEnv(Env):
         }
 
     def reset_sampler(self):
-        print("[rec_gym.py] reset_sampler() called")
         self._environment.reset_sampler()
 
     def render(self, mode='human'):
-        print("[rec_gym.py] render() called")
         raise NotImplementedError("Render not implemented.")
 
     def close(self):
-        print("[rec_gym.py] close() called")
         pass
 
     def seed(self, seed=None):
-        print(f"[rec_gym.py] seed() called with seed: {seed}")
         np.random.seed(seed)
 
     def extract_env_info(self):
-        print("[rec_gym.py] extract_env_info() called")
         return {"env": self._environment}
 
     def reset_metrics(self):
-        print("[rec_gym.py] reset_metrics() called")
         self._metrics = collections.defaultdict(float)
 
     def update_metrics(self, responses, info=None):
-        print("[rec_gym.py] update_metrics() called")
         self._metrics = self._metrics_aggregator(responses, self._metrics, info)
 
     def write_metrics(self, add_summary_fn):
-        print("[rec_gym.py] write_metrics() called")
         self._metrics_writer(self._metrics, add_summary_fn)

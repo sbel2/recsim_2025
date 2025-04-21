@@ -9,14 +9,13 @@ class AbstractResponse(abc.ABC):
     @staticmethod
     @abc.abstractmethod
     def response_space() -> spaces.Space:
-        print("[user.py] AbstractResponse.response_space() called")
+        """Defines how a single response is represented."""
         pass
 
     @abc.abstractmethod
     def create_observation(self) -> Any:
-        print("[user.py] AbstractResponse.create_observation() called")
+        """Creates an observation of this response."""
         pass
-
 
 class AbstractUserState(abc.ABC):
     """Abstract class to represent a user's state."""
@@ -25,44 +24,39 @@ class AbstractUserState(abc.ABC):
 
     @abc.abstractmethod
     def create_observation(self) -> np.ndarray:
-        print("[user.py] AbstractUserState.create_observation() called")
+        """Generates observation of the user's state."""
         pass
 
     @staticmethod
     @abc.abstractmethod
     def observation_space() -> spaces.Space:
-        print("[user.py] AbstractUserState.observation_space() called")
+        """Defines how user states are represented."""
         pass
-
 
 class AbstractUserSampler(abc.ABC):
     """Abstract class to sample users."""
 
     def __init__(self, user_ctor: Type[AbstractUserState], seed: int = 0):
-        print("[user.py] AbstractUserSampler.__init__() called")
         self._user_ctor = user_ctor
         self._seed = seed
         self.reset_sampler()
 
     def reset_sampler(self):
-        print("[user.py] AbstractUserSampler.reset_sampler() called")
         self._rng = np.random.default_rng(self._seed)
 
     @abc.abstractmethod
     def sample_user(self) -> AbstractUserState:
-        print("[user.py] AbstractUserSampler.sample_user() called")
+        """Creates a new user state instance."""
         pass
 
     def get_user_ctor(self) -> Type[AbstractUserState]:
-        print("[user.py] AbstractUserSampler.get_user_ctor() called")
+        """Returns the constructor for user states."""
         return self._user_ctor
-
 
 class AbstractUserModel(abc.ABC):
     """Abstract class to represent a user's dynamics."""
 
     def __init__(self, response_model_ctor: Type[AbstractResponse], user_sampler: AbstractUserSampler, slate_size: int):
-        print("[user.py] AbstractUserModel.__init__() called")
         if not response_model_ctor:
             raise TypeError("response_model_ctor is a required callable")
 
@@ -73,40 +67,39 @@ class AbstractUserModel(abc.ABC):
 
     @abc.abstractmethod
     def update_state(self, slate_documents: List[Any], responses: List[AbstractResponse]):
-        print("[user.py] AbstractUserModel.update_state() called")
+        """Updates the user's state based on the slate and responses."""
         pass
 
     def reset(self):
-        print("[user.py] AbstractUserModel.reset() called")
+        """Resets the user state."""
         self._user_state = self._user_sampler.sample_user()
 
     def reset_sampler(self):
-        print("[user.py] AbstractUserModel.reset_sampler() called")
+        """Resets the user sampler."""
         self._user_sampler.reset_sampler()
 
     @abc.abstractmethod
     def is_terminal(self) -> bool:
-        print("[user.py] AbstractUserModel.is_terminal() called")
+        """Indicates whether the session is over."""
         pass
 
     @abc.abstractmethod
     def simulate_response(self, documents: List[Any]) -> List[AbstractResponse]:
-        print("[user.py] AbstractUserModel.simulate_response() called")
+        """Simulates the user's response to a slate of documents."""
         pass
 
     def response_space(self) -> spaces.Space:
-        print("[user.py] AbstractUserModel.response_space() called")
         res_space = self._response_model_ctor.response_space()
         return spaces.Tuple([res_space for _ in range(self._slate_size)])
 
     def get_response_model_ctor(self) -> Type[AbstractResponse]:
-        print("[user.py] AbstractUserModel.get_response_model_ctor() called")
+        """Returns the constructor for response models."""
         return self._response_model_ctor
 
     def observation_space(self) -> spaces.Space:
-        print("[user.py] AbstractUserModel.observation_space() called")
+        """Describes possible user observations."""
         return self._user_state.observation_space()
 
     def create_observation(self) -> np.ndarray:
-        print("[user.py] AbstractUserModel.create_observation() called")
+        """Emits observation about the user's state."""
         return self._user_state.create_observation()
