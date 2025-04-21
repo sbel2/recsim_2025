@@ -1,5 +1,3 @@
-# interest_evolution.py
-
 import numpy as np
 from gym import spaces
 
@@ -16,6 +14,7 @@ class IEvResponse(user.AbstractResponse):
     MAX_QUALITY_SCORE = 100
 
     def __init__(self, clicked=False, watch_time=0.0, liked=False, quality=0.0, cluster_id=0.0):
+        print("[interest_evolution.py] IEvResponse.__init__() called")
         self.clicked = clicked
         self.watch_time = watch_time
         self.liked = liked
@@ -23,6 +22,7 @@ class IEvResponse(user.AbstractResponse):
         self.cluster_id = cluster_id
 
     def create_observation(self):
+        print("[interest_evolution.py] IEvResponse.create_observation() called")
         return {
             'click': int(self.clicked),
             'watch_time': np.array(self.watch_time),
@@ -33,6 +33,7 @@ class IEvResponse(user.AbstractResponse):
 
     @classmethod
     def response_space(cls):
+        print("[interest_evolution.py] IEvResponse.response_space() called")
         return spaces.Dict({
             'click': spaces.Discrete(2),
             'watch_time': spaces.Box(0.0, IEvVideo.MAX_VIDEO_LENGTH, shape=(), dtype=np.float32),
@@ -47,6 +48,7 @@ class IEvVideo(document.AbstractDocument):
     NUM_FEATURES = 20
 
     def __init__(self, doc_id, features, cluster_id=None, video_length=None, quality=None):
+        print(f"[interest_evolution.py] IEvVideo.__init__() called for doc_id {doc_id}")
         self.features = features
         self.cluster_id = cluster_id
         self.video_length = video_length
@@ -54,15 +56,18 @@ class IEvVideo(document.AbstractDocument):
         super().__init__(doc_id)
 
     def create_observation(self):
+        print("[interest_evolution.py] IEvVideo.create_observation() called")
         return self.features
 
     @classmethod
     def observation_space(cls):
+        print("[interest_evolution.py] IEvVideo.observation_space() called")
         return spaces.Box(shape=(cls.NUM_FEATURES,), dtype=np.float32, low=-1.0, high=1.0)
 
 
 class UtilityModelVideoSampler(document.AbstractDocumentSampler):
     def __init__(self, doc_ctor=IEvVideo, min_utility=-3.0, max_utility=3.0, video_length=4.0, **kwargs):
+        print("[interest_evolution.py] UtilityModelVideoSampler.__init__() called")
         super().__init__(doc_ctor, **kwargs)
         self._doc_count = 0
         self._num_clusters = self.get_doc_ctor().NUM_FEATURES
@@ -74,6 +79,7 @@ class UtilityModelVideoSampler(document.AbstractDocumentSampler):
         self.cluster_means = np.concatenate((trashy, nutritious))
 
     def sample_document(self):
+        print("[interest_evolution.py] UtilityModelVideoSampler.sample_document() called")
         cluster_id = self._rng.integers(0, self._num_clusters)
         features = np.zeros(self._num_clusters)
         features[cluster_id] = 1.0
@@ -99,6 +105,7 @@ class IEvUserState(user.AbstractUserState):
                  keep_interact_prob=None, min_doc_utility=None, user_update_alpha=None, watched_videos=None,
                  impressed_videos=None, liked_videos=None, step_penalty=None, min_normalizer=None,
                  user_quality_factor=None, document_quality_factor=None):
+        print("[interest_evolution.py] IEvUserState.__init__() called")
         self.user_interests = user_interests
         self.time_budget = time_budget
         self.keep_interact_prob = keep_interact_prob
@@ -118,32 +125,32 @@ class IEvUserState(user.AbstractUserState):
         self.liked_videos = liked_videos or set()
 
     def score_document(self, doc_obs):
+        print("[interest_evolution.py] IEvUserState.score_document() called")
         if self.user_interests.shape != doc_obs.shape:
             raise ValueError('User and document feature dimension mismatch!')
         return np.dot(self.user_interests, doc_obs)
 
     def create_observation(self):
+        print("[interest_evolution.py] IEvUserState.create_observation() called")
         return self.user_interests
 
     @classmethod
     def observation_space(cls):
+        print("[interest_evolution.py] IEvUserState.observation_space() called")
         return spaces.Box(shape=(cls.NUM_FEATURES,), dtype=np.float32, low=-1.0, high=1.0)
 
-class UtilityModelUserSampler(user.AbstractUserSampler):
-    """Class that samples users for utility model experiment."""
 
-    def __init__(self,
-                 user_ctor=IEvUserState,
-                 document_quality_factor=1.0,
-                 no_click_mass=1.0,
-                 min_normalizer=-1.0,
-                 **kwargs):
+class UtilityModelUserSampler(user.AbstractUserSampler):
+    def __init__(self, user_ctor=IEvUserState, document_quality_factor=1.0,
+                 no_click_mass=1.0, min_normalizer=-1.0, **kwargs):
+        print("[interest_evolution.py] UtilityModelUserSampler.__init__() called")
         self._no_click_mass = no_click_mass
         self._min_normalizer = min_normalizer
         self._document_quality_factor = document_quality_factor
         super().__init__(user_ctor=user_ctor, **kwargs)
 
     def sample_user(self):
+        print("[interest_evolution.py] UtilityModelUserSampler.sample_user() called")
         features = {
             'user_interests': self._rng.uniform(-1.0, 1.0, self.get_user_ctor().NUM_FEATURES),
             'time_budget': 200.0,
@@ -158,15 +165,19 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
         }
         return self._user_ctor(**features)
 
+
 class IEvUserModel(user.AbstractUserModel):
     def __init__(self, slate_size, choice_model_ctor, response_model_ctor=IEvResponse,
                  user_state_ctor=IEvUserState, no_click_mass=1.0, seed=0,
                  alpha_x_intercept=1.0, alpha_y_intercept=0.3):
+        print("[interest_evolution.py] IEvUserModel.__init__() called")
         super().__init__(
             response_model_ctor,
             UtilityModelUserSampler(
-            user_ctor=user_state_ctor, no_click_mass=no_click_mass, seed=seed),
-        slate_size)
+                user_ctor=user_state_ctor,
+                no_click_mass=no_click_mass,
+                seed=seed),
+            slate_size)
         if choice_model_ctor is None:
             raise Exception('A choice model needs to be specified!')
         self.choice_model = choice_model_ctor(self._user_state.choice_features)
@@ -174,9 +185,11 @@ class IEvUserModel(user.AbstractUserModel):
         self._alpha_y_intercept = alpha_y_intercept
 
     def is_terminal(self):
+        print("[interest_evolution.py] IEvUserModel.is_terminal() called")
         return self._user_state.time_budget <= 0
 
     def update_state(self, slate_documents, responses):
+        print("[interest_evolution.py] IEvUserModel.update_state() called")
         def compute_alpha(x, x_int, y_int):
             return (-y_int / x_int) * np.abs(x) + y_int
 
@@ -209,6 +222,7 @@ class IEvUserModel(user.AbstractUserModel):
         user_state.time_budget -= user_state.step_penalty
 
     def simulate_response(self, documents):
+        print("[interest_evolution.py] IEvUserModel.simulate_response() called")
         responses = [self._response_model_ctor() for _ in documents]
         doc_obs = [doc.create_observation() for doc in documents]
         self.choice_model.score_documents(self._user_state, doc_obs)
@@ -224,20 +238,19 @@ class IEvUserModel(user.AbstractUserModel):
         return responses
 
     def _generate_click_response(self, doc, response):
+        print("[interest_evolution.py] IEvUserModel._generate_click_response() called")
         user_state = self._user_state
         response.clicked = True
         response.watch_time = min(user_state.time_budget, doc.video_length)
 
 
 def clicked_watchtime_reward(responses):
+    print("[interest_evolution.py] clicked_watchtime_reward() called")
     return sum(r.watch_time for r in responses if r.clicked)
 
 
-# def total_clicks_reward(responses):
-#     return sum(int(r.clicked) for r in responses)
-
-
 def create_environment(env_config):
+    print("[interest_evolution.py] create_environment() called")
     user_model = IEvUserModel(
         env_config['slate_size'],
         choice_model_ctor=choice_model.MultinomialProportionalChoiceModel,
