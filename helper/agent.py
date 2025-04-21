@@ -6,6 +6,7 @@ class AbstractRecommenderAgent(abc.ABC):
     _multi_user = False
 
     def __init__(self, action_space):
+        print("[agent.py] Initializing AbstractRecommenderAgent")
         self._slate_size = action_space.nvec.shape[0]
 
     @property
@@ -15,16 +16,19 @@ class AbstractRecommenderAgent(abc.ABC):
     @abc.abstractmethod
     def step(self, reward, observation):
         """Records the last transition and returns the agent's next action."""
+        print("[agent.py] Abstract step() called")
         pass
 
     @abc.abstractmethod
     def bundle_and_checkpoint(self, checkpoint_dir, iteration_number):
         """Returns a dictionary bundle of the agent's state for checkpointing."""
+        print("[agent.py] Abstract bundle_and_checkpoint() called")
         pass
 
     @abc.abstractmethod
     def unbundle(self, checkpoint_dir, iteration_number, bundle_dict):
         """Restores the agent's state from a checkpoint bundle."""
+        print("[agent.py] Abstract unbundle() called")
         pass
 
 
@@ -32,22 +36,27 @@ class AbstractEpisodicRecommenderAgent(AbstractRecommenderAgent):
     """Abstract class for episodic agents."""
 
     def __init__(self, action_space, summary_writer=None):
+        print("[agent.py] Initializing AbstractEpisodicRecommenderAgent")
         super().__init__(action_space)
         self._episode_num = 0
         self._summary_writer = summary_writer
 
     def begin_episode(self, observation=None):
+        print(f"[agent.py] begin_episode() - Episode {self._episode_num + 1}")
         self._episode_num += 1
         return self.step(0, observation)
 
     def end_episode(self, reward, observation=None):
+        print(f"[agent.py] end_episode() - Episode {self._episode_num}")
         pass
 
     def bundle_and_checkpoint(self, checkpoint_dir, iteration_number):
+        print(f"[agent.py] bundle_and_checkpoint() - Iteration {iteration_number}")
         del checkpoint_dir, iteration_number
         return {"episode_num": self._episode_num}
 
     def unbundle(self, checkpoint_dir, iteration_number, bundle_dict):
+        print(f"[agent.py] unbundle() - Iteration {iteration_number}")
         del checkpoint_dir, iteration_number
         if "episode_num" not in bundle_dict:
             print("[WARNING] Could not restore agent state from checkpoint.")
