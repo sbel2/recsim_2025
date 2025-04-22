@@ -4,6 +4,9 @@ import torch.nn as nn
 import torch.optim as optim
 from gym import spaces
 
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 # class ResponseAdapter:
 #     def __init__(self, input_response_space):

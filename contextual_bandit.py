@@ -1,5 +1,8 @@
 import numpy as np
 
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class ContextualBanditAgent:
     def __init__(self, n_arms, epsilon=0.1):
         self.n_arms = n_arms

@@ -44,7 +44,7 @@ class IEvResponse(user.AbstractResponse):
 
 class IEvVideo(document.AbstractDocument):
     MAX_VIDEO_LENGTH = 100.0
-    NUM_FEATURES = 20
+    NUM_FEATURES = 7
 
     def __init__(self, doc_id, features, cluster_id=None, video_length=None, quality=None):
         self.features = features
@@ -69,9 +69,14 @@ class UtilityModelVideoSampler(document.AbstractDocumentSampler):
         self._min_utility = min_utility
         self._max_utility = max_utility
         self._video_length = video_length
-        trashy = np.linspace(self._min_utility, 0, int(self._num_clusters * 0.7))
-        nutritious = np.linspace(0, self._max_utility, int(self._num_clusters * 0.3))
+        num_trashy = int(round(self._num_clusters * 0.7))
+        num_nutritious = self._num_clusters - num_trashy
+
+        trashy = np.linspace(self._min_utility, 0, num_trashy, endpoint=False)
+        nutritious = np.linspace(0, self._max_utility, num_nutritious)
+
         self.cluster_means = np.concatenate((trashy, nutritious))
+
 
     def sample_document(self):
         cluster_id = self._rng.integers(0, self._num_clusters)
@@ -93,7 +98,7 @@ class UtilityModelVideoSampler(document.AbstractDocumentSampler):
 
 
 class IEvUserState(user.AbstractUserState):
-    NUM_FEATURES = 20
+    NUM_FEATURES = 7
 
     def __init__(self, user_interests, time_budget=None, score_scaling=None, attention_prob=None, no_click_mass=None,
                  keep_interact_prob=None, min_doc_utility=None, user_update_alpha=None, watched_videos=None,
@@ -135,7 +140,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
     def __init__(self,
                  user_ctor=IEvUserState,
                  document_quality_factor=1.0,
-                 no_click_mass=1.0,
+                 no_click_mass=0.5,
                  min_normalizer=-1.0,
                  **kwargs):
         self._no_click_mass = no_click_mass
@@ -146,7 +151,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
     def sample_user(self):
         features = {
             'user_interests': self._rng.uniform(-1.0, 1.0, self.get_user_ctor().NUM_FEATURES),
-            'time_budget': 200.0,
+            'time_budget': 100.0,
             'no_click_mass': self._no_click_mass,
             'step_penalty': 0.5,
             'score_scaling': 0.05,
@@ -160,7 +165,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
 
 class IEvUserModel(user.AbstractUserModel):
     def __init__(self, slate_size, choice_model_ctor, response_model_ctor=IEvResponse,
-                 user_state_ctor=IEvUserState, no_click_mass=1.0, seed=0,
+                 user_state_ctor=IEvUserState, no_click_mass=0.5, seed=0,
                  alpha_x_intercept=1.0, alpha_y_intercept=0.3):
         super().__init__(
             response_model_ctor,

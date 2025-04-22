@@ -3,6 +3,10 @@ from gym import spaces
 from helper import agent as abstract_agent
 from helper import dqn_agent
 
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 class FullSlateQAgent(dqn_agent.DQNAgentRecSim, abstract_agent.AbstractEpisodicRecommenderAgent):
     """Recommender agent implementing full slate Q-learning."""
 

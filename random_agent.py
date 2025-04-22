@@ -1,6 +1,8 @@
 import numpy as np
 import helper.agent as agent
 
+import torch
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class RandomAgent(agent.AbstractEpisodicRecommenderAgent):
     """An agent that recommends a random slate of documents."""
