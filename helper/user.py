@@ -1,11 +1,10 @@
 import abc
-from gym import spaces
+from gymnasium import spaces
 import numpy as np
 from typing import Type, Any, List
 
 class AbstractResponse(abc.ABC):
     """Abstract class to model a user response."""
-
     @staticmethod
     @abc.abstractmethod
     def response_space() -> spaces.Space:

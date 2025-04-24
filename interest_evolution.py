@@ -1,8 +1,8 @@
 # interest_evolution.py
 
 import numpy as np
-from gym import spaces
-
+import gymnasium as gym
+from gymnasium import spaces
 from helper import choice_model
 from helper import document
 from helper import user
@@ -10,7 +10,7 @@ from helper import utils
 from helper import environment
 from helper import rec_gym
 
-
+# 定义了用户对视频的交互反馈：是否点击/观看时间/点赞/内容质量/视频类别
 class IEvResponse(user.AbstractResponse):
     MIN_QUALITY_SCORE = -100
     MAX_QUALITY_SCORE = 100
@@ -30,25 +30,28 @@ class IEvResponse(user.AbstractResponse):
             'quality': np.array(self.quality),
             'cluster_id': int(self.cluster_id)
         }
-
     @classmethod
     def response_space(cls):
         return spaces.Dict({
-            'click': spaces.Discrete(2),
+            'click': spaces.Discrete(2), 
             'watch_time': spaces.Box(0.0, IEvVideo.MAX_VIDEO_LENGTH, shape=(), dtype=np.float32),
             'liked': spaces.Discrete(2),
             'quality': spaces.Box(cls.MIN_QUALITY_SCORE, cls.MAX_QUALITY_SCORE, shape=(), dtype=np.float32),
             'cluster_id': spaces.Discrete(IEvVideo.NUM_FEATURES)
         })
 
-
+# 视频对象: 
 class IEvVideo(document.AbstractDocument):
     MAX_VIDEO_LENGTH = 100.0
+    # 视频的特征维度
     NUM_FEATURES = 7
 
     def __init__(self, doc_id, features, cluster_id=None, video_length=None, quality=None):
+        # one-hot encoding = [0,0,1,0,0,0,0]
         self.features = features
+        # cluster_id = 2
         self.cluster_id = cluster_id
+        # 外部构造时显示传入
         self.video_length = video_length
         self.quality = quality
         super().__init__(doc_id)
@@ -77,7 +80,6 @@ class UtilityModelVideoSampler(document.AbstractDocumentSampler):
 
         self.cluster_means = np.concatenate((trashy, nutritious))
 
-
     def sample_document(self):
         cluster_id = self._rng.integers(0, self._num_clusters)
         features = np.zeros(self._num_clusters)
@@ -94,7 +96,7 @@ class UtilityModelVideoSampler(document.AbstractDocumentSampler):
         }
 
         self._doc_count += 1
-        return self._doc_ctor(**doc_features)
+        return self._doc_ctor(**doc_features)   
 
 
 class IEvUserState(user.AbstractUserState):
@@ -124,6 +126,7 @@ class IEvUserState(user.AbstractUserState):
 
     def score_document(self, doc_obs):
         if self.user_interests.shape != doc_obs.shape:
+            print("User dimension: ",self.user_interests.shape, "Doc_obs dimension: ", doc_obs.shape)
             raise ValueError('User and document feature dimension mismatch!')
         return np.dot(self.user_interests, doc_obs)
 
@@ -140,7 +143,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
     def __init__(self,
                  user_ctor=IEvUserState,
                  document_quality_factor=1.0,
-                 no_click_mass=0.5,
+                 no_click_mass=1,
                  min_normalizer=-1.0,
                  **kwargs):
         self._no_click_mass = no_click_mass
@@ -151,7 +154,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
     def sample_user(self):
         features = {
             'user_interests': self._rng.uniform(-1.0, 1.0, self.get_user_ctor().NUM_FEATURES),
-            'time_budget': 100.0,
+            'time_budget': 200.0,
             'no_click_mass': self._no_click_mass,
             'step_penalty': 0.5,
             'score_scaling': 0.05,
@@ -233,7 +236,7 @@ class IEvUserModel(user.AbstractUserModel):
         response.clicked = True
         response.watch_time = min(user_state.time_budget, doc.video_length)
 
-
+# Reward function
 def clicked_watchtime_reward(responses):
     return sum(r.watch_time for r in responses if r.clicked)
 
@@ -258,14 +261,19 @@ def create_environment(env_config):
     env = environment.Environment(
         user_model,
         document_sampler,
+        # 10 个 doc
         env_config['num_candidates'],
+        # 调2个推荐
         env_config['slate_size'],
         resample_documents=env_config['resample_documents']
     )
 
     return rec_gym.RecSimGymEnv(
         env,
+        # watch time as a reward
         clicked_watchtime_reward,
+        # metrics: impression, click, quality, cluster_watch_count_no_click
         utils.aggregate_video_cluster_metrics,
+        # metrics: 'CTR'= clicks / impressions; 'AverageQuality'= quality / clicks
         utils.write_video_cluster_metrics
     )

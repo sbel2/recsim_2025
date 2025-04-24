@@ -1,6 +1,6 @@
 import collections
 import numpy as np
-from gym import Env, spaces
+from gymnasium import Env, spaces
 from helper.environment import MultiUserEnvironment
 
 

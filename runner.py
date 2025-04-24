@@ -1,8 +1,10 @@
 import os
 import time
+import json
 import logging
 import pickle
 import numpy as np
+from tqdm import tqdm 
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -27,6 +29,8 @@ class Runner:
         self._max_steps_per_episode = max_steps_per_episode
         self._episode_log_file = episode_log_file
         self._episode_writer = None
+        self._plot_data = []
+        self._eval_plot_data = []
 
         os.makedirs(self._output_dir, exist_ok=True)
         os.makedirs(self._checkpoint_dir, exist_ok=True)
@@ -67,7 +71,6 @@ class Runner:
     def _run_one_episode(self):
         step_number = 0
         total_reward = 0.0
-
         observation = self._env.reset()
         action = self._agent.begin_episode(observation)
 
@@ -123,15 +126,15 @@ class Runner:
             )
 
 
-
     def run_training(self, max_training_steps=250000, num_iterations=100, checkpoint_frequency=1):
         logging.info('Beginning training...')
         start_iter, total_steps = self._load_latest_checkpoint()
+        # --- Initialize dict to save episode vs reward ---
         if num_iterations <= start_iter:
             logging.warning('No training needed. Exiting.')
             return
 
-        for iteration in range(start_iter, num_iterations):
+        for iteration in tqdm(range(start_iter, num_iterations), desc = "Training Episode"):
             logging.info(f'[TRAIN] Starting iteration {iteration + 1}/{num_iterations}')
             self._initialize_metrics()
             num_steps = 0
@@ -156,13 +159,25 @@ class Runner:
             total_steps += num_steps
 
             # Write metrics (to TensorBoard + file)
+            # self._write_metrics(total_steps, suffix='train')
             self._write_metrics(total_steps, suffix='train')
 
+            # --- Record episode vs Reward for plotting ---
+            avg_rew = np.mean(self._stats['episode_reward'])
+            self._plot_data.append({
+                                "episode": iteration,
+                                "avg_rew": avg_rew
+                            })
             # Save checkpoint
             if (iteration + 1) % checkpoint_frequency == 0 or (iteration + 1) == num_iterations:
                 self._save_checkpoint(iteration, total_steps)
                 logging.info(f"[TRAIN] Saved checkpoint at iteration {iteration}")
-
+        
+        plot_path = os.path.join(self._output_dir, 'plot_data.json')
+        print("Training plot path: ",plot_path )
+        with open(plot_path, 'w') as f:
+            json.dump(self._plot_data, f)
+        logging.info(f"[TRAIN] Saved plot data to {plot_path}")
 
     def run_evaluation(self, max_eval_episodes=100, checkpoint_dir=None):
         logging.info('Beginning evaluation...')
@@ -171,38 +186,54 @@ class Runner:
         files = [f for f in os.listdir(checkpoint_dir) if f.endswith('.pkl')]
         files.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
+        # --- Initialize dict to save episode vs reward ---
+        # self._eval_plot_data = {'step': [], 'avg_rew': []}
+
         # Case 1: No checkpoints, fall back to evaluating current agent
+        
         if not files:
             logging.info("[EVAL] No checkpoint found. Evaluating current agent directly.")
             self._initialize_metrics()
 
-            for ep_idx in range(max_eval_episodes):
+            for ep_idx in tqdm(range(max_eval_episodes), desc = "Evaluation Episode"):
                 ep_len, ep_reward = self._run_one_episode()
                 self._stats['episode_length'].append(ep_len)
                 self._stats['episode_reward'].append(ep_reward)
                 print(f"[EVAL] CurrentAgent | Episode {ep_idx+1} | Reward: {ep_reward:.2f} | Length: {ep_len}")
 
             self._write_metrics(0, suffix='eval')
-            return
-
+            avg_rew = np.mean(self._stats['episode_reward'])
+            self._eval_plot_data.append({"step": 0, "avg_rew": avg_rew})
+            
+            # return
+        else: 
         # Case 2: Evaluate from each checkpoint
-        for file in files:
-            with open(os.path.join(checkpoint_dir, file), 'rb') as f:
-                data = pickle.load(f)
+            for file in files:
+                with open(os.path.join(checkpoint_dir, file), 'rb') as f:
+                    data = pickle.load(f)
 
-            if not self._agent.unbundle(data):
-                logging.warning(f"Could not load checkpoint {file}")
-                continue
+                if not self._agent.unbundle(data):
+                    logging.warning(f"Could not load checkpoint {file}")
+                    continue
 
-            logging.info(f"[EVAL] Evaluating checkpoint {file}")
-            self._initialize_metrics()
+                logging.info(f"[EVAL] Evaluating checkpoint {file}")
+                self._initialize_metrics()
 
-            for ep_idx in range(max_eval_episodes):
-                ep_len, ep_reward = self._run_one_episode()
-                self._stats['episode_length'].append(ep_len)
-                self._stats['episode_reward'].append(ep_reward)
-                print(f"[EVAL] {file} | Episode {ep_idx+1} | Reward: {ep_reward:.2f} | Length: {ep_len}")
+                for ep_idx in tqdm(range(max_eval_episodes), desc = "Evaluation Episode"):
+                    ep_len, ep_reward = self._run_one_episode()
+                    self._stats['episode_length'].append(ep_len)
+                    self._stats['episode_reward'].append(ep_reward)
+                    print(f"[EVAL] {file} | Episode {ep_idx+1} | Reward: {ep_reward:.2f} | Length: {ep_len}")
+                    self._eval_plot_data.append({
+                                    "step": ep_idx,
+                                    "avg_rew": ep_reward
+                                })
+                self._write_metrics(data['total_steps'], suffix='eval')
+                
 
-            self._write_metrics(data['total_steps'], suffix='eval')
-
+        plot_path = os.path.join(self._output_dir, 'eval_plot_data.json')
+        print("Plot path: ", plot_path)
+        with open(plot_path, 'w') as f:
+            json.dump(self._eval_plot_data, f)
+        logging.info(f"[EVAL] Saved eval plot data to {plot_path}")
     

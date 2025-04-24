@@ -1,5 +1,5 @@
 import abc
-from gym import spaces
+from gymnasium import spaces
 import numpy as np
 
 class CandidateSet:
