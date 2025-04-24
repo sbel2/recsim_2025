@@ -42,21 +42,13 @@ class RecSimGymEnv(Env):
         base_space = spaces.MultiDiscrete(
             self._environment.num_candidates * np.ones((self._environment.slate_size,), dtype=int)
         )
-        if isinstance(self._environment, MultiUserEnvironment):
-            return spaces.Tuple([base_space] * self._environment.num_users)
         return base_space
 
     @property
     def observation_space(self):
         """Returns observation space with user, document, and response info."""
-        if isinstance(self._environment, MultiUserEnvironment):
-            user_obs_space = self._environment.user_model[0].observation_space()
-            response_obs_space = self._environment.user_model[0].response_space()
-            user_obs_space = spaces.Tuple([user_obs_space] * self._environment.num_users)
-            response_obs_space = spaces.Tuple([response_obs_space] * self._environment.num_users)
-        else:
-            user_obs_space = self._environment.user_model.observation_space()
-            response_obs_space = self._environment.user_model.response_space()
+        user_obs_space = self._environment.user_model.observation_space()
+        response_obs_space = self._environment.user_model.response_space()
 
         return spaces.Dict({
             "user": user_obs_space,
@@ -67,14 +59,7 @@ class RecSimGymEnv(Env):
     def step(self, action):
         """Executes one step of the environment."""
         user_obs, doc_obs, responses, done = self._environment.step(action)
-
-        if isinstance(self._environment, MultiUserEnvironment):
-            all_responses = tuple(
-                tuple(resp.create_observation() for resp in user_resps)
-                for user_resps in responses
-            )
-        else:
-            all_responses = tuple(resp.create_observation() for resp in responses)
+        all_responses = tuple(resp.create_observation() for resp in responses)
 
         obs = {
             "user": user_obs,
@@ -101,9 +86,6 @@ class RecSimGymEnv(Env):
 
     def render(self, mode='human'):
         raise NotImplementedError("Render not implemented.")
-
-    def close(self):
-        pass
 
     def seed(self, seed=None):
         np.random.seed(seed)

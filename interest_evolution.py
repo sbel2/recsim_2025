@@ -15,10 +15,9 @@ class IEvResponse(user.AbstractResponse):
     MIN_QUALITY_SCORE = -100
     MAX_QUALITY_SCORE = 100
 
-    def __init__(self, clicked=False, watch_time=0.0, liked=False, quality=0.0, cluster_id=0.0):
+    def __init__(self, clicked=False, watch_time=0.0, quality=0.0, cluster_id=0.0):
         self.clicked = clicked
         self.watch_time = watch_time
-        self.liked = liked
         self.quality = quality
         self.cluster_id = cluster_id
 
@@ -26,7 +25,6 @@ class IEvResponse(user.AbstractResponse):
         return {
             'click': int(self.clicked),
             'watch_time': np.array(self.watch_time),
-            'liked': int(self.liked),
             'quality': np.array(self.quality),
             'cluster_id': int(self.cluster_id)
         }
@@ -35,7 +33,6 @@ class IEvResponse(user.AbstractResponse):
         return spaces.Dict({
             'click': spaces.Discrete(2), 
             'watch_time': spaces.Box(0.0, IEvVideo.MAX_VIDEO_LENGTH, shape=(), dtype=np.float32),
-            'liked': spaces.Discrete(2),
             'quality': spaces.Box(cls.MIN_QUALITY_SCORE, cls.MAX_QUALITY_SCORE, shape=(), dtype=np.float32),
             'cluster_id': spaces.Discrete(IEvVideo.NUM_FEATURES)
         })
@@ -102,14 +99,10 @@ class UtilityModelVideoSampler(document.AbstractDocumentSampler):
 class IEvUserState(user.AbstractUserState):
     NUM_FEATURES = 7
 
-    def __init__(self, user_interests, time_budget=None, score_scaling=None, attention_prob=None, no_click_mass=None,
-                 keep_interact_prob=None, min_doc_utility=None, user_update_alpha=None, watched_videos=None,
-                 impressed_videos=None, liked_videos=None, step_penalty=None, min_normalizer=None,
+    def __init__(self, user_interests, time_budget=None, score_scaling=None, attention_prob=None, no_click_mass=None, user_update_alpha=None, step_penalty=None, min_normalizer=None,
                  user_quality_factor=None, document_quality_factor=None):
         self.user_interests = user_interests
         self.time_budget = time_budget
-        self.keep_interact_prob = keep_interact_prob
-        self.min_doc_utility = min_doc_utility
         self.choice_features = {
             'score_scaling': score_scaling,
             'attention_prob': attention_prob,
@@ -120,9 +113,6 @@ class IEvUserState(user.AbstractUserState):
         self.step_penalty = step_penalty
         self.user_quality_factor = user_quality_factor
         self.document_quality_factor = document_quality_factor
-        self.watched_videos = watched_videos or set()
-        self.impressed_videos = impressed_videos or set()
-        self.liked_videos = liked_videos or set()
 
     def score_document(self, doc_obs):
         if self.user_interests.shape != doc_obs.shape:
