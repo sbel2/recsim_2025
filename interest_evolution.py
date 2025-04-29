@@ -10,7 +10,6 @@ from helper import utils
 from helper import environment
 from helper import rec_gym
 
-# 定义了用户对视频的交互反馈：是否点击/观看时间/点赞/内容质量/视频类别
 class IEvResponse(user.AbstractResponse):
     MIN_QUALITY_SCORE = -100
     MAX_QUALITY_SCORE = 100
@@ -37,10 +36,8 @@ class IEvResponse(user.AbstractResponse):
             'cluster_id': spaces.Discrete(IEvVideo.NUM_FEATURES)
         })
 
-# 视频对象: 
 class IEvVideo(document.AbstractDocument):
     MAX_VIDEO_LENGTH = 100.0
-    # 视频的特征维度
     NUM_FEATURES = 7
 
     def __init__(self, doc_id, features, cluster_id=None, video_length=None, quality=None):
@@ -48,7 +45,6 @@ class IEvVideo(document.AbstractDocument):
         self.features = features
         # cluster_id = 2
         self.cluster_id = cluster_id
-        # 外部构造时显示传入
         self.video_length = video_length
         self.quality = quality
         super().__init__(doc_id)
@@ -251,9 +247,7 @@ def create_environment(env_config):
     env = environment.Environment(
         user_model,
         document_sampler,
-        # 10 个 doc
         env_config['num_candidates'],
-        # 调2个推荐
         env_config['slate_size'],
         resample_documents=env_config['resample_documents']
     )

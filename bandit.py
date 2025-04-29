@@ -12,7 +12,6 @@ class EpsilonGreedyBandit:
         self.values = np.zeros(n_arms)
 
     def select_action(self, observation=None):
-        # 有epsilon 可能explore
         if np.random.rand() < self.epsilon:
             return np.random.randint(self.n_arms)
         return np.argmax(self.values)

@@ -12,7 +12,7 @@ class BestPolicyAgent:
         return [self.select_action(observation)]
 
     def end_episode(self, reward, observation=None):
-        pass  # 不学习，啥也不做
+        pass
 
     def select_action(self, observation):
         user_vec = observation["user"]

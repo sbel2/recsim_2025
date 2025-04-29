@@ -1,16 +1,12 @@
 import collections
 import numpy as np
 from gymnasium import Env, spaces
-from helper.environment import MultiUserEnvironment
-
 
 def _dummy_metrics_aggregator(responses, metrics, info):
     return metrics
 
-
 def _dummy_metrics_writer(metrics, add_summary_fn):
     pass
-
 
 class RecSimGymEnv(Env):
     """Gym-compliant wrapper for a recommendation simulation environment."""

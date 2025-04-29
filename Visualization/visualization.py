@@ -1,7 +1,3 @@
-#%%
-%cd /projectnb/vkolagrp/yiliu/hrandomw/project_2/recsim_2025
-
-#%%
 import json
 import numpy as np
 import matplotlib.pyplot as plt
