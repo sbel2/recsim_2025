@@ -125,19 +125,23 @@ class Runner:
                 f"Time/Step: {time_per_step:.4f}\n"
             )
 
-
+    # Plot training_step vs avg_reward(over iteration)
     def run_training(self, max_training_steps=250000, num_iterations=100, checkpoint_frequency=1):
         logging.info('Beginning training...')
         start_iter, total_steps = self._load_latest_checkpoint()
-        # --- Initialize dict to save episode vs reward ---
+
         if num_iterations <= start_iter:
             logging.warning('No training needed. Exiting.')
             return
 
-        for iteration in tqdm(range(start_iter, num_iterations), desc = "Training Episode"):
+        # --- 新增：专门记录所有iteration的数据 ---
+        all_runs_steps_rewards = []  # 每个iteration保存一个list，里面是(step, reward)
+
+        for iteration in tqdm(range(start_iter, num_iterations), desc="Training Episode"):
             logging.info(f'[TRAIN] Starting iteration {iteration + 1}/{num_iterations}')
             self._initialize_metrics()
             num_steps = 0
+            iteration_steps_rewards = []  # 当前 iteration 的 (step, reward) 数据
             start_time = time.time()
 
             while num_steps < max_training_steps:
@@ -155,29 +159,54 @@ class Runner:
                 )
 
                 num_steps += ep_len
+                total_steps += ep_len  # 注意total_steps是全局累加的
 
-            total_steps += num_steps
+                # 记录当前total_steps vs reward
+                iteration_steps_rewards.append((total_steps, ep_reward))
 
-            # Write metrics (to TensorBoard + file)
-            # self._write_metrics(total_steps, suffix='train')
+            all_runs_steps_rewards.append(iteration_steps_rewards)  # 保存这一条run的数据
+
+            # 写 metrics
             self._write_metrics(total_steps, suffix='train')
 
-            # --- Record episode vs Reward for plotting ---
-            avg_rew = np.mean(self._stats['episode_reward'])
-            self._plot_data.append({
-                                "episode": iteration,
-                                "avg_rew": avg_rew
-                            })
-            # Save checkpoint
             if (iteration + 1) % checkpoint_frequency == 0 or (iteration + 1) == num_iterations:
                 self._save_checkpoint(iteration, total_steps)
                 logging.info(f"[TRAIN] Saved checkpoint at iteration {iteration}")
-        
+
+        # --- 整理多个iteration后的数据，统一对齐steps，求平均 ---
+        logging.info("[TRAIN] Start aggregating plot data...")
+
+        # Step1：收集所有出现过的step
+        step_set = set()
+        for run in all_runs_steps_rewards:
+            for step, reward in run:
+                step_set.add(step)
+
+        common_steps = sorted(list(step_set))  # 所有出现过的training_steps（去重排序）
+
+        # Step2：对每个step，计算所有iteration上reward的平均
+        step_to_rewards = {step: [] for step in common_steps}
+        for run in all_runs_steps_rewards:
+            for step, reward in run:
+                step_to_rewards[step].append(reward)
+
+        # Step3：把平均reward保存到_plot_data
+        self._plot_data = []
+        for step in common_steps:
+            rewards = step_to_rewards[step]
+            avg_reward = np.mean(rewards)
+            self._plot_data.append({
+                "training_step": step,
+                "avg_reward": avg_reward
+            })
+
+        # 保存 plot_data
         plot_path = os.path.join(self._output_dir, 'plot_data.json')
-        print("Training plot path: ",plot_path )
+        print("Training plot path: ", plot_path)
         with open(plot_path, 'w') as f:
             json.dump(self._plot_data, f)
         logging.info(f"[TRAIN] Saved plot data to {plot_path}")
+
 
     def run_evaluation(self, max_eval_episodes=100, checkpoint_dir=None):
         logging.info('Beginning evaluation...')
@@ -186,16 +215,15 @@ class Runner:
         files = [f for f in os.listdir(checkpoint_dir) if f.endswith('.pkl')]
         files.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
 
-        # --- Initialize dict to save episode vs reward ---
-        # self._eval_plot_data = {'step': [], 'avg_rew': []}
+        # --- Initialize dict to save step vs avg_eval_reward ---
+        self._eval_plot_data = []  # ✨每次评估一条点：(checkpoint训练步数, 平均reward)
 
         # Case 1: No checkpoints, fall back to evaluating current agent
-        
         if not files:
             logging.info("[EVAL] No checkpoint found. Evaluating current agent directly.")
             self._initialize_metrics()
 
-            for ep_idx in tqdm(range(max_eval_episodes), desc = "Evaluation Episode"):
+            for ep_idx in tqdm(range(max_eval_episodes), desc="Evaluation Episode"):
                 ep_len, ep_reward = self._run_one_episode()
                 self._stats['episode_length'].append(ep_len)
                 self._stats['episode_reward'].append(ep_reward)
@@ -203,11 +231,10 @@ class Runner:
 
             self._write_metrics(0, suffix='eval')
             avg_rew = np.mean(self._stats['episode_reward'])
-            self._eval_plot_data.append({"step": 0, "avg_rew": avg_rew})
-            
-            # return
-        else: 
-        # Case 2: Evaluate from each checkpoint
+            self._eval_plot_data.append({"training_step": 0, "avg_reward": avg_rew})
+
+        else:
+            # Case 2: Evaluate from each checkpoint
             for file in files:
                 with open(os.path.join(checkpoint_dir, file), 'rb') as f:
                     data = pickle.load(f)
@@ -216,24 +243,31 @@ class Runner:
                     logging.warning(f"Could not load checkpoint {file}")
                     continue
 
-                logging.info(f"[EVAL] Evaluating checkpoint {file}")
+                checkpoint_steps = data.get('total_steps', 0)  # ✨从checkpoint中取出训练步数
+                logging.info(f"[EVAL] Evaluating checkpoint {file} at training step {checkpoint_steps}")
                 self._initialize_metrics()
 
-                for ep_idx in tqdm(range(max_eval_episodes), desc = "Evaluation Episode"):
+                for ep_idx in tqdm(range(max_eval_episodes), desc=f"Evaluation @ Step {checkpoint_steps}"):
                     ep_len, ep_reward = self._run_one_episode()
                     self._stats['episode_length'].append(ep_len)
                     self._stats['episode_reward'].append(ep_reward)
                     print(f"[EVAL] {file} | Episode {ep_idx+1} | Reward: {ep_reward:.2f} | Length: {ep_len}")
-                    self._eval_plot_data.append({
-                                    "step": ep_idx,
-                                    "avg_rew": ep_reward
-                                })
-                self._write_metrics(data['total_steps'], suffix='eval')
-                
 
+                # 写 tensorboard
+                self._write_metrics(checkpoint_steps, suffix='eval')
+
+                # --- ✨保存这次 evaluation 的 (training_step, avg_reward) ✨---
+                avg_rew = np.mean(self._stats['episode_reward'])
+                self._eval_plot_data.append({
+                    "training_step": checkpoint_steps,
+                    "avg_reward": avg_rew
+                })
+
+        # --- Save eval plot data ---
         plot_path = os.path.join(self._output_dir, 'eval_plot_data.json')
-        print("Plot path: ", plot_path)
+        print("Eval plot path: ", plot_path)
         with open(plot_path, 'w') as f:
             json.dump(self._eval_plot_data, f)
         logging.info(f"[EVAL] Saved eval plot data to {plot_path}")
+
     

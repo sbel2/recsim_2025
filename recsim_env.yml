@@ -1,0 +1,19 @@
+name: recsim_env
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.8
+  - pip
+  - numpy
+  - matplotlib
+  - tqdm
+  - gymnasium
+  - pytorch
+  - torchvision
+  - torchaudio
+  - ipykernel
+  - tensorboard
+  - pip:
+      - scikit-learn
+      - joblib
