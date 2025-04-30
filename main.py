@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, '/projectnb/ds543/ysi/my_python_packages')
-
 import os
 import numpy as np
 import shutil
@@ -177,100 +174,100 @@ runner_cb_user_doc.run_training(max_training_steps=100, num_iterations=5000)
 runner_cb_user_doc.run_evaluation(max_eval_episodes=5)
 
 #%%
-from naive_dqn import NaiveDQNAgent
-from gymnasium import spaces
-tmp_base_dir = './logs/naive_dqn'
+# from naive_dqn import NaiveDQNAgent
+# from gymnasium import spaces
+# tmp_base_dir = './logs/naive_dqn'
 
-def create_naive_dqn_agent(env, **kwargs):
-    doc_obs_space = env.observation_space['doc']
+# def create_naive_dqn_agent(env, **kwargs):
+#     doc_obs_space = env.observation_space['doc']
 
-    if isinstance(doc_obs_space, spaces.Dict):
-        first_key = list(doc_obs_space.spaces.keys())[0]
-        per_doc_dim = doc_obs_space.spaces[first_key].shape[0]
-        num_docs = len(doc_obs_space.spaces)
-        obs_dim = per_doc_dim * num_docs  # e.g., 20 * 10 = 200
-    else:
-        raise ValueError("Unsupported doc observation space:", doc_obs_space)
+#     if isinstance(doc_obs_space, spaces.Dict):
+#         first_key = list(doc_obs_space.spaces.keys())[0]
+#         per_doc_dim = doc_obs_space.spaces[first_key].shape[0]
+#         num_docs = len(doc_obs_space.spaces)
+#         obs_dim = per_doc_dim * num_docs  # e.g., 20 * 10 = 200
+#     else:
+#         raise ValueError("Unsupported doc observation space:", doc_obs_space)
 
-    if isinstance(env.action_space, spaces.Discrete):
-        n_actions = env.action_space.n
-    elif isinstance(env.action_space, spaces.MultiDiscrete):
-        n_actions = env.action_space.nvec[0]
-    else:
-        raise ValueError("Unsupported action space type")
+#     if isinstance(env.action_space, spaces.Discrete):
+#         n_actions = env.action_space.n
+#     elif isinstance(env.action_space, spaces.MultiDiscrete):
+#         n_actions = env.action_space.nvec[0]
+#     else:
+#         raise ValueError("Unsupported action space type")
 
-    print(f"obs_dim: {obs_dim}, n_actions: {n_actions}")
-    return NaiveDQNAgent(
-        obs_dim=obs_dim,
-        n_actions=n_actions,
-        epsilon=kwargs.get('epsilon', 0.1),
-        gamma=kwargs.get('gamma', 0.99),
-        lr=kwargs.get('lr', 1e-3)
-    )
+#     print(f"obs_dim: {obs_dim}, n_actions: {n_actions}")
+#     return NaiveDQNAgent(
+#         obs_dim=obs_dim,
+#         n_actions=n_actions,
+#         epsilon=kwargs.get('epsilon', 0.1),
+#         gamma=kwargs.get('gamma', 0.99),
+#         lr=kwargs.get('lr', 1e-3)
+#     )
 
-train_log_dir = os.path.join(tmp_base_dir, 'train')
-eval_log_dir = os.path.join(tmp_base_dir, 'eval')
+# train_log_dir = os.path.join(tmp_base_dir, 'train')
+# eval_log_dir = os.path.join(tmp_base_dir, 'eval')
 
-for log_dir in [train_log_dir, eval_log_dir]:
-    if os.path.exists(log_dir):
-        shutil.rmtree(log_dir)
+# for log_dir in [train_log_dir, eval_log_dir]:
+#     if os.path.exists(log_dir):
+#         shutil.rmtree(log_dir)
 
-Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
-#%%
-runner_naive_dqn = Runner(
-    base_dir=tmp_base_dir,
-    create_agent_fn=create_naive_dqn_agent,
-    env=interest_evolution.create_environment(env_config),
-)
-#%%
-runner_naive_dqn.run_training(max_training_steps=100, num_iterations=5000)
-runner_naive_dqn.run_evaluation(max_eval_episodes=5)
+# Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
+# #%%
+# runner_naive_dqn = Runner(
+#     base_dir=tmp_base_dir,
+#     create_agent_fn=create_naive_dqn_agent,
+#     env=interest_evolution.create_environment(env_config),
+# )
+# #%%
+# runner_naive_dqn.run_training(max_training_steps=100, num_iterations=5000)
+# runner_naive_dqn.run_evaluation(max_eval_episodes=5)
 
-#%%
-# Double DQN
-from double_dqn import DoubleDQNAgent
-tmp_base_dir = './logs/double_dqn'
+# #%%
+# # Double DQN
+# from double_dqn import DoubleDQNAgent
+# tmp_base_dir = './logs/double_dqn'
 
-def create_double_dqn_agent(env, **kwargs):
-    doc_obs_space = env.observation_space['doc']
+# def create_double_dqn_agent(env, **kwargs):
+#     doc_obs_space = env.observation_space['doc']
 
-    if isinstance(doc_obs_space, spaces.Dict):
-        first_key = list(doc_obs_space.spaces.keys())[0]
-        per_doc_dim = doc_obs_space.spaces[first_key].shape[0]
-        num_docs = len(doc_obs_space.spaces)
-        obs_dim = per_doc_dim * num_docs
-    else:
-        raise ValueError("Unsupported doc observation space:", doc_obs_space)
+#     if isinstance(doc_obs_space, spaces.Dict):
+#         first_key = list(doc_obs_space.spaces.keys())[0]
+#         per_doc_dim = doc_obs_space.spaces[first_key].shape[0]
+#         num_docs = len(doc_obs_space.spaces)
+#         obs_dim = per_doc_dim * num_docs
+#     else:
+#         raise ValueError("Unsupported doc observation space:", doc_obs_space)
 
-    if isinstance(env.action_space, spaces.Discrete):
-        n_actions = env.action_space.n
-    elif isinstance(env.action_space, spaces.MultiDiscrete):
-        n_actions = env.action_space.nvec[0]
-    else:
-        raise ValueError("Unsupported action space type")
+#     if isinstance(env.action_space, spaces.Discrete):
+#         n_actions = env.action_space.n
+#     elif isinstance(env.action_space, spaces.MultiDiscrete):
+#         n_actions = env.action_space.nvec[0]
+#     else:
+#         raise ValueError("Unsupported action space type")
 
-    print(f"[DoubleDQN] obs_dim: {obs_dim}, n_actions: {n_actions}")
-    return DoubleDQNAgent(
-        obs_dim=obs_dim,
-        n_actions=n_actions,
-        epsilon=kwargs.get('epsilon', 0.1),
-        gamma=kwargs.get('gamma', 0.99),
-        lr=kwargs.get('lr', 1e-3),
-        tau=kwargs.get('tau', 0.005)  # soft update rate
-    )
-train_log_dir = os.path.join(tmp_base_dir, 'train')
-eval_log_dir = os.path.join(tmp_base_dir, 'eval')
+#     print(f"[DoubleDQN] obs_dim: {obs_dim}, n_actions: {n_actions}")
+#     return DoubleDQNAgent(
+#         obs_dim=obs_dim,
+#         n_actions=n_actions,
+#         epsilon=kwargs.get('epsilon', 0.1),
+#         gamma=kwargs.get('gamma', 0.99),
+#         lr=kwargs.get('lr', 1e-3),
+#         tau=kwargs.get('tau', 0.005)  # soft update rate
+#     )
+# train_log_dir = os.path.join(tmp_base_dir, 'train')
+# eval_log_dir = os.path.join(tmp_base_dir, 'eval')
 
-for log_dir in [train_log_dir, eval_log_dir]:
-    if os.path.exists(log_dir):
-        shutil.rmtree(log_dir)
+# for log_dir in [train_log_dir, eval_log_dir]:
+#     if os.path.exists(log_dir):
+#         shutil.rmtree(log_dir)
 
-Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
-runner_double_dqn = Runner(
-    base_dir=tmp_base_dir,
-    create_agent_fn=create_double_dqn_agent,
-    env=interest_evolution.create_environment(env_config),
-)
-#%%
-runner_double_dqn.run_training(max_training_steps=100, num_iterations=5000)
-runner_double_dqn.run_evaluation(max_eval_episodes=5)
+# Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
+# runner_double_dqn = Runner(
+#     base_dir=tmp_base_dir,
+#     create_agent_fn=create_double_dqn_agent,
+#     env=interest_evolution.create_environment(env_config),
+# )
+# #%%
+# runner_double_dqn.run_training(max_training_steps=100, num_iterations=5000)
+# runner_double_dqn.run_evaluation(max_eval_episodes=5)
