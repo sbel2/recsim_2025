@@ -152,16 +152,16 @@ def plot_smoothed_combined(file_type, smooth_window=10):
     print(f"保存图像至：{save_path}")
 
 #%%
-# 执行所有画图任务
-# for file_type in file_types:
-#     if file_type == 'eval_watch_time.json':
-#         plot_all_algos_for_filetype(file_type, 2)
-#         plot_smoothed_recovered(file_type,2)
-#         plot_smoothed_combined(file_type,2)
-#     else:
-#         plot_all_algos_for_filetype(file_type, 1000)
-#         plot_smoothed_recovered(file_type,1000)
-#         plot_smoothed_combined(file_type,1000)
+for file_type in file_types:
+    if file_type == 'eval_watch_time.json':
+        plot_all_algos_for_filetype(file_type, 2)
+        plot_smoothed_recovered(file_type,2)
+        plot_smoothed_combined(file_type,2)
+    else:
+        plot_all_algos_for_filetype(file_type, 1000)
+        plot_smoothed_recovered(file_type,1000)
+        plot_smoothed_combined(file_type,1000)
+        
 # %%
 ## Avg reward for the last 1000
 results = []
