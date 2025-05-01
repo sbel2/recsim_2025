@@ -47,14 +47,8 @@ class DocOnlyContextualBanditAgent:
         self.last_context = context_vectors[action]
         return action
 
-    # def update(self, action, reward):
-    #     self.counts[action] += 1
-    #     n = self.counts[action]
-    #     value = self.values[action]
-    #     self.values[action] += (reward - value) / n
-
     def update(self, action, reward):
-        x = self.last_context  # 当前 doc 的特征向量
+        x = self.last_context
         self.A[action] += np.outer(x, x)
         self.b[action] += reward * x
         self.theta[action] = np.linalg.inv(self.A[action]) @ self.b[action]
@@ -73,18 +67,6 @@ class DocOnlyContextualBanditAgent:
         self.b = data['b']
         self.theta = data['theta']
         return True
-    # def bundle(self):
-    #     return {
-    #         'counts': self.counts,
-    #         'values': self.values
-    #     }
-
-    # def unbundle(self, data):
-    #     if data is None:
-    #         return False
-    #     self.counts = data['counts']
-    #     self.values = data['values']
-    #     return True
 
 
 class UserDocContextualBanditAgent:

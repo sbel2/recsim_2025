@@ -14,7 +14,7 @@ class UCBBandit:
         ucb_scores = np.zeros(self.n_arms)
         for arm in range(self.n_arms):
             if self.counts[arm] == 0:
-                return arm  # pull untried arms first
+                return arm
             avg_reward = self.values[arm]
             confidence = self.c * np.sqrt(np.log(self.total_pulls) / self.counts[arm])
             ucb_scores[arm] = avg_reward + confidence
