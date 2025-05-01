@@ -7,7 +7,6 @@ from pathlib import Path
 from runner import Runner
 import interest_evolution
 
-
 #%%
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -22,50 +21,14 @@ env_config = {
     'resample_documents': True,
     'seed': seed,
 }
+MAX_TRAINING_STEPS = 20000
+NUM_ITERATIONS = 200
 
 #%%
-from best_policy import BestPolicyAgent
-def create_best_policy_agent(env, **kwargs):
-    obs = env.reset()
-    user_dim = obs['user'].shape[0]
-    
-    # doc is a dict: arm_id -> doc_vec
-    first_doc = next(iter(obs['doc'].values()))
-    doc_dim = first_doc.shape[0]
-    n_arms = len(obs['doc'])
-    slate_size = env_config['slate_size']
-    
-    return BestPolicyAgent(doc_dim=doc_dim, n_arms=n_arms, slate_size=slate_size)
-
-# --- Logging Directories ---
-tmp_base_dir = './logs/best_policy'
-train_log_dir = os.path.join(tmp_base_dir, 'train')
-eval_log_dir = os.path.join(tmp_base_dir, 'eval')
-
-# Clean up old logs
-for log_dir in [train_log_dir, eval_log_dir]:
-    if os.path.exists(log_dir):
-        shutil.rmtree(log_dir)
-Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
-
-# --- Environment ---
-env = interest_evolution.create_environment(env_config)
-
-# --- Runner ---
-runner_best = Runner(
-    base_dir=tmp_base_dir,
-    create_agent_fn=create_best_policy_agent,
-    env=env
-)
-
-# --- Run Training & Evaluation ---
-runner_best.run_training(max_training_steps=20000, num_iterations=100)
-runner_best.run_evaluation(max_eval_episodes=5)
-
-#%%
+#random agent
 from random_agent import RandomAgent
 
-tmp_base_dir = './logs/random'
+tmp_base_dir = f'./logs/random/{MAX_TRAINING_STEPS}_{NUM_ITERATIONS}'
 
 # Automatically delete train and eval directories if they exist
 train_log_dir = os.path.join(tmp_base_dir, 'train')
@@ -81,81 +44,89 @@ Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
 def create_random_agent(env, **kwargs):
     return RandomAgent(action_space=env.action_space)
     
-# --- Initialize training runner ---
 runner_random = Runner(
     base_dir=tmp_base_dir,
     create_agent_fn=create_random_agent,
     env=interest_evolution.create_environment(env_config),
 )
 
-# --- Run training + evaluation ---
-runner_random.run_training(max_training_steps=2000, num_iterations=100)
-runner_random.run_evaluation(max_eval_episodes=5)
+runner_random.run_training(max_training_steps=MAX_TRAINING_STEPS, num_iterations=NUM_ITERATIONS)
+runner_random.run_evaluation(num_eval_episodes=5)
 
+#%%
+#Best policy
 
-# %%
+from best_policy import BestPolicyAgent
+tmp_base_dir = f'./logs/best_policy/{MAX_TRAINING_STEPS}_{NUM_ITERATIONS}'
+
+train_log_dir = os.path.join(tmp_base_dir, 'train')
+eval_log_dir = os.path.join(tmp_base_dir, 'eval')
+
+def create_best_policy_agent(env, **kwargs):
+    obs = env.reset()
+    user_dim = obs['user'].shape[0]
+    
+    first_doc = next(iter(obs['doc'].values()))
+    doc_dim = first_doc.shape[0]
+    n_arms = len(obs['doc'])
+    slate_size = env_config['slate_size']
+    
+    return BestPolicyAgent(doc_dim=doc_dim, n_arms=n_arms, slate_size=slate_size)
+
+runner_best = Runner(
+    base_dir=tmp_base_dir,
+    create_agent_fn=create_best_policy_agent,
+    env=interest_evolution.create_environment(env_config)
+)
+
+runner_best.run_training(max_training_steps=MAX_TRAINING_STEPS, num_iterations=NUM_ITERATIONS)
+runner_best.run_evaluation(num_eval_episodes=5)
+
+#%%
+#UCB bandit
+
 from bandit import BanditAgentWrapper
 
-# UCB_Bandit 
-tmp_base_dir = './logs/UCB_bandit'
-def create_ucb_agent(env, c=1.0):
-    return BanditAgentWrapper(n_arms=env.action_space.nvec[0], c=c)
+tmp_base_dir = f'./logs/bandit/{MAX_TRAINING_STEPS}_{NUM_ITERATIONS}'
 
-for c_val in [0.1, 0.5, 1.0, 2.0]:
-    tmp_base_dir = f'./logs/UCB_bandit_c_{c_val}'
-    for log_dir in [os.path.join(tmp_base_dir, 'train'), os.path.join(tmp_base_dir, 'eval')]:
+def create_bandit_agent(env):
+    return BanditAgentWrapper(n_arms=env.action_space.nvec[0], epsilon = 0)
+
+train_log_dir = os.path.join(tmp_base_dir, 'train')
+eval_log_dir = os.path.join(tmp_base_dir, 'eval')
+for log_dir in [train_log_dir, eval_log_dir]:
+    if os.path.exists(log_dir):
+        shutil.rmtree(log_dir)
+Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
+
+# Run Bandit agent
+runner_bandit = Runner(
+    base_dir=tmp_base_dir,
+    create_agent_fn=create_bandit_agent,
+    env=interest_evolution.create_environment(env_config),
+)
+
+runner_bandit.run_training(max_training_steps=MAX_TRAINING_STEPS, num_iterations=NUM_ITERATIONS)
+runner_bandit.run_evaluation(num_eval_episodes=5)
+
+#%%
+#Contextual bandit doc-only and user-doc
+from interest_evolution import create_environment
+from contextual_bandit import DocOnlyContextualBanditAgent, UserDocContextualBanditAgent
+
+def clean_log_dirs(base_dir):
+    for sub in ['train', 'eval']:
+        log_dir = os.path.join(base_dir, sub)
         if os.path.exists(log_dir):
             shutil.rmtree(log_dir)
-    Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
+    Path(base_dir).mkdir(parents=True, exist_ok=True)
 
-    runner_ucb = Runner(
-        base_dir=tmp_base_dir,
-        create_agent_fn=lambda env: create_ucb_agent(env, c=c_val),
-        env=interest_evolution.create_environment(env_config),
-    )
-
-    print(f"\n=== Running UCB Bandit with c = {c_val} ===")
-    runner_ucb.run_training(max_training_steps=2000, num_iterations=100)
-    runner_ucb.run_evaluation(max_eval_episodes=5)
-
-
-#%%
-# from contextual_bandit import ContextualBanditAgent
-# tmp_base_dir = './logs/Contextual_bandit'
-
-# def create_contextual_bandit_agent(env, **kwargs):
-#     n_arms = env.action_space.nvec[0]  # Use .nvec[0] for MultiDiscrete
-#     return ContextualBanditAgent(n_arms=n_arms, epsilon=0.1)
-
-# train_log_dir = os.path.join(tmp_base_dir, 'train')
-# eval_log_dir = os.path.join(tmp_base_dir, 'eval')
-
-# for log_dir in [train_log_dir, eval_log_dir]:
-#     if os.path.exists(log_dir):
-#         shutil.rmtree(log_dir)
-
-# Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
-
-# runner_cb = Runner(
-#     base_dir=tmp_base_dir,
-#     create_agent_fn=create_contextual_bandit_agent,
-#     env=interest_evolution.create_environment(env_config),
-# )
-
-# runner_cb.run_training(max_training_steps=100, num_iterations=5000)
-# runner_cb.run_evaluation(max_eval_episodes=5)
-
-#%%
-# DocOnlyContextual and UserDocContextual
-from contextual_bandit import DocOnlyContextualBanditAgent, UserDocContextualBanditAgent
-from interest_evolution import create_environment
-
-def create_contextual_bandit_agent(env_config, use_user_context=False):
-    env = create_environment(env_config)
+#agent factory
+def create_contextual_bandit_agent(env, use_user_context=False):
     doc_obs_space = env.observation_space['doc']
     user_obs_space = env.observation_space['user']
-    
     first_doc_key = list(doc_obs_space.spaces.keys())[0]
+
     doc_dim = doc_obs_space.spaces[first_doc_key].shape[0]
     user_dim = user_obs_space.shape[0]
     n_arms = len(doc_obs_space.spaces)
@@ -176,143 +147,95 @@ def create_contextual_bandit_agent(env_config, use_user_context=False):
             epsilon=0.1
         )
 
-tmp_base_dir_1 = './logs/Contextual_bandit_DocOnly'
-tmp_base_dir_2 = './logs/Contextual_bandit_UserDoc'
+def run_contextual_bandit(label, use_user_context):
+    log_dir = f'./logs/Contextual_bandit_{label}/{MAX_TRAINING_STEPS}_{NUM_ITERATIONS}'
+    clean_log_dirs(log_dir)
 
-train_log_dir_1 = os.path.join(tmp_base_dir_1, 'train')
-eval_log_dir_1 = os.path.join(tmp_base_dir_1, 'eval')
+    env = create_environment(env_config)
 
+    runner = Runner(
+        base_dir=log_dir,
+        create_agent_fn=lambda env: create_contextual_bandit_agent(env, use_user_context),
+        env=env,
+    )
 
-for log_dir in [train_log_dir_1, eval_log_dir_1]:
+    print(f"\n=== Training Contextual Bandit ({label}) ===")
+    runner.run_training(max_training_steps=MAX_TRAINING_STEPS, num_iterations=NUM_ITERATIONS)
+    runner.run_evaluation(max_eval_episodes=NUM_EVAL_EPISODES)
+
+#run both agents
+run_contextual_bandit(label="DocOnly", use_user_context=False)
+run_contextual_bandit(label="UserDoc", use_user_context=True)
+
+#%%
+#Naive DQN
+from dqn import DQNAgent
+from gymnasium import spaces
+
+tmp_base_dir = f'./logs/naive_dqn/{MAX_TRAINING_STEPS}_{NUM_ITERATIONS}'
+
+print("Start DQN")
+
+def create_dqn_agent(env, double=False, **kwargs):
+    doc_obs_space = env.observation_space['doc']
+
+    if isinstance(doc_obs_space, spaces.Dict):
+        first_key = list(doc_obs_space.spaces.keys())[0]
+        per_doc_dim = doc_obs_space.spaces[first_key].shape[0]
+        num_docs = len(doc_obs_space.spaces)
+        obs_dim = per_doc_dim * num_docs
+    else:
+        raise ValueError("Unsupported doc observation space:", doc_obs_space)
+
+    if isinstance(env.action_space, spaces.Discrete):
+        n_actions = env.action_space.n
+    elif isinstance(env.action_space, spaces.MultiDiscrete):
+        n_actions = env.action_space.nvec[0]
+    else:
+        raise ValueError("Unsupported action space type")
+
+    print(f"obs_dim: {obs_dim}, n_actions: {n_actions}")
+    return DQNAgent(
+        obs_dim=obs_dim,
+        n_actions=n_actions,
+        double=double  # ✅ indicate whether it is double dqn
+    )
+
+train_log_dir = os.path.join(tmp_base_dir, 'train')
+eval_log_dir = os.path.join(tmp_base_dir, 'eval')
+
+for log_dir in [train_log_dir, eval_log_dir]:
     if os.path.exists(log_dir):
         shutil.rmtree(log_dir)
 
-Path(tmp_base_dir_1).mkdir(parents=True, exist_ok=True)
+Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
 
-runner_cb_doc = Runner(
-    base_dir=tmp_base_dir_1,
-    create_agent_fn=lambda env: create_contextual_bandit_agent(env_config, use_user_context=False),
+runner_naive_dqn = Runner(
+    base_dir=tmp_base_dir,
+    create_agent_fn=lambda env: create_dqn_agent(env, double=False),
     env=interest_evolution.create_environment(env_config),
 )
-#%%
-runner_cb_doc.run_training(max_training_steps=20000, num_iterations=100)
-runner_cb_doc.run_evaluation(max_eval_episodes=5)
-#%%
-# USER+DOC
-train_log_dir_2 = os.path.join(tmp_base_dir_2, 'train')
-eval_log_dir_2 = os.path.join(tmp_base_dir_2, 'eval')
 
+runner_naive_dqn.run_training(max_training_steps=MAX_TRAINING_STEPS, num_iterations=NUM_ITERATIONS)
+runner_naive_dqn.run_evaluation(num_eval_episodes=5)
 
-for log_dir in [train_log_dir_2, eval_log_dir_2]:
+#%%
+#Double DQN
+tmp_base_dir = f'./logs/double_dqn_{MAX_TRAINING_STEPS}_{NUM_ITERATIONS}'
+train_log_dir = os.path.join(tmp_base_dir, 'train')
+eval_log_dir = os.path.join(tmp_base_dir, 'eval')
+
+for log_dir in [train_log_dir, eval_log_dir]:
     if os.path.exists(log_dir):
         shutil.rmtree(log_dir)
 
-Path(tmp_base_dir_2).mkdir(parents=True, exist_ok=True)
+Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
 
-runner_cb_user_doc = Runner(
-    base_dir=tmp_base_dir_2,
-    create_agent_fn=lambda env: create_contextual_bandit_agent(env_config, use_user_context=True),
+runner_double_dqn = Runner(
+    base_dir=tmp_base_dir,
+    create_agent_fn=lambda env: create_dqn_agent(env, double=True),
     env=interest_evolution.create_environment(env_config),
 )
-#%%
-runner_cb_user_doc.run_training(max_training_steps=20000, num_iterations=100)
-runner_cb_user_doc.run_evaluation(max_eval_episodes=5)
 
-#%%
-# from naive_dqn import NaiveDQNAgent
-# from gymnasium import spaces
-# tmp_base_dir = './logs/naive_dqn'
-
-# def create_naive_dqn_agent(env, **kwargs):
-#     doc_obs_space = env.observation_space['doc']
-
-#     if isinstance(doc_obs_space, spaces.Dict):
-#         first_key = list(doc_obs_space.spaces.keys())[0]
-#         per_doc_dim = doc_obs_space.spaces[first_key].shape[0]
-#         num_docs = len(doc_obs_space.spaces)
-#         obs_dim = per_doc_dim * num_docs  # e.g., 20 * 10 = 200
-#     else:
-#         raise ValueError("Unsupported doc observation space:", doc_obs_space)
-
-#     if isinstance(env.action_space, spaces.Discrete):
-#         n_actions = env.action_space.n
-#     elif isinstance(env.action_space, spaces.MultiDiscrete):
-#         n_actions = env.action_space.nvec[0]
-#     else:
-#         raise ValueError("Unsupported action space type")
-
-#     print(f"obs_dim: {obs_dim}, n_actions: {n_actions}")
-#     return NaiveDQNAgent(
-#         obs_dim=obs_dim,
-#         n_actions=n_actions,
-#         epsilon=kwargs.get('epsilon', 0.1),
-#         gamma=kwargs.get('gamma', 0.99),
-#         lr=kwargs.get('lr', 1e-3)
-#     )
-
-# train_log_dir = os.path.join(tmp_base_dir, 'train')
-# eval_log_dir = os.path.join(tmp_base_dir, 'eval')
-
-# for log_dir in [train_log_dir, eval_log_dir]:
-#     if os.path.exists(log_dir):
-#         shutil.rmtree(log_dir)
-
-# Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
-# #%%
-# runner_naive_dqn = Runner(
-#     base_dir=tmp_base_dir,
-#     create_agent_fn=create_naive_dqn_agent,
-#     env=interest_evolution.create_environment(env_config),
-# )
-# #%%
-# runner_naive_dqn.run_training(max_training_steps=100, num_iterations=5000)
-# runner_naive_dqn.run_evaluation(max_eval_episodes=5)
-
-# #%%
-# # Double DQN
-# from double_dqn import DoubleDQNAgent
-# tmp_base_dir = './logs/double_dqn'
-
-# def create_double_dqn_agent(env, **kwargs):
-#     doc_obs_space = env.observation_space['doc']
-
-#     if isinstance(doc_obs_space, spaces.Dict):
-#         first_key = list(doc_obs_space.spaces.keys())[0]
-#         per_doc_dim = doc_obs_space.spaces[first_key].shape[0]
-#         num_docs = len(doc_obs_space.spaces)
-#         obs_dim = per_doc_dim * num_docs
-#     else:
-#         raise ValueError("Unsupported doc observation space:", doc_obs_space)
-
-#     if isinstance(env.action_space, spaces.Discrete):
-#         n_actions = env.action_space.n
-#     elif isinstance(env.action_space, spaces.MultiDiscrete):
-#         n_actions = env.action_space.nvec[0]
-#     else:
-#         raise ValueError("Unsupported action space type")
-
-#     print(f"[DoubleDQN] obs_dim: {obs_dim}, n_actions: {n_actions}")
-#     return DoubleDQNAgent(
-#         obs_dim=obs_dim,
-#         n_actions=n_actions,
-#         epsilon=kwargs.get('epsilon', 0.1),
-#         gamma=kwargs.get('gamma', 0.99),
-#         lr=kwargs.get('lr', 1e-3),
-#         tau=kwargs.get('tau', 0.005)  # soft update rate
-#     )
-# train_log_dir = os.path.join(tmp_base_dir, 'train')
-# eval_log_dir = os.path.join(tmp_base_dir, 'eval')
-
-# for log_dir in [train_log_dir, eval_log_dir]:
-#     if os.path.exists(log_dir):
-#         shutil.rmtree(log_dir)
-
-# Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
-# runner_double_dqn = Runner(
-#     base_dir=tmp_base_dir,
-#     create_agent_fn=create_double_dqn_agent,
-#     env=interest_evolution.create_environment(env_config),
-# )
-# #%%
-# runner_double_dqn.run_training(max_training_steps=100, num_iterations=5000)
-# runner_double_dqn.run_evaluation(max_eval_episodes=5)
+runner_double_dqn.run_training(max_training_steps=MAX_TRAINING_STEPS, num_iterations=NUM_ITERATIONS)
+runner_double_dqn.run_evaluation(num_eval_episodes=5)

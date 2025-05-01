@@ -10,6 +10,7 @@ from helper import utils
 from helper import environment
 from helper import rec_gym
 
+# 定义了用户对视频的交互反馈：是否点击/观看时间/点赞/内容质量/视频类别
 class IEvResponse(user.AbstractResponse):
     MIN_QUALITY_SCORE = -100
     MAX_QUALITY_SCORE = 100
@@ -36,8 +37,10 @@ class IEvResponse(user.AbstractResponse):
             'cluster_id': spaces.Discrete(IEvVideo.NUM_FEATURES)
         })
 
+# 视频对象: 
 class IEvVideo(document.AbstractDocument):
     MAX_VIDEO_LENGTH = 100.0
+    # 视频的特征维度
     NUM_FEATURES = 7
 
     def __init__(self, doc_id, features, cluster_id=None, video_length=None, quality=None):
@@ -45,6 +48,7 @@ class IEvVideo(document.AbstractDocument):
         self.features = features
         # cluster_id = 2
         self.cluster_id = cluster_id
+        # 外部构造时显示传入
         self.video_length = video_length
         self.quality = quality
         super().__init__(doc_id)
@@ -98,6 +102,10 @@ class IEvUserState(user.AbstractUserState):
     def __init__(self, user_interests, time_budget=None, score_scaling=None, attention_prob=None, no_click_mass=None, user_update_alpha=None, step_penalty=None, min_normalizer=None,
                  user_quality_factor=None, document_quality_factor=None):
         self.user_interests = user_interests
+        self.initial_time_budget = time_budget  # NEW
+        self.current_time_budget = time_budget  # NEW
+        self.recovered_time = 0.0    # NEW           
+        self.total_watch_time = 0.0 # NEW
         self.time_budget = time_budget
         self.choice_features = {
             'score_scaling': score_scaling,
@@ -110,9 +118,15 @@ class IEvUserState(user.AbstractUserState):
         self.user_quality_factor = user_quality_factor
         self.document_quality_factor = document_quality_factor
 
+    def reset_tracking(self):  # ✅ NEW
+        self.current_time_budget = self.initial_time_budget
+        self.recovered_time = 0.0
+        self.total_watch_time = 0.0
+        self.time_budget = self.initial_time_budget
+
     def score_document(self, doc_obs):
         if self.user_interests.shape != doc_obs.shape:
-            print("User dimension: ",self.user_interests.shape, "Doc_obs dimension: ", doc_obs.shape)
+            # print("User dimension: ",self.user_interests.shape, "Doc_obs dimension: ", doc_obs.shape)
             raise ValueError('User and document feature dimension mismatch!')
         return np.dot(self.user_interests, doc_obs)
 
@@ -153,6 +167,20 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
         return self._user_ctor(**features)
 
 class IEvUserModel(user.AbstractUserModel):
+    # def __init__(self, slate_size, choice_model_ctor, response_model_ctor=IEvResponse,
+    #              user_state_ctor=IEvUserState, no_click_mass=0.5, seed=0,
+    #              alpha_x_intercept=1.0, alpha_y_intercept=0.3):
+    #     super().__init__(
+    #         response_model_ctor,
+    #         UtilityModelUserSampler(
+    #         user_ctor=user_state_ctor, no_click_mass=no_click_mass, seed=seed),
+    #     slate_size)
+    #     if choice_model_ctor is None:
+    #         raise Exception('A choice model needs to be specified!')
+    #     self.choice_model = choice_model_ctor(self._user_state.choice_features)
+    #     self._alpha_x_intercept = alpha_x_intercept
+    #     self._alpha_y_intercept = alpha_y_intercept
+
     def __init__(self, slate_size, choice_model_ctor, response_model_ctor=IEvResponse,
                  user_state_ctor=IEvUserState, no_click_mass=0.5, seed=0,
                  alpha_x_intercept=1.0, alpha_y_intercept=0.3):
@@ -166,9 +194,44 @@ class IEvUserModel(user.AbstractUserModel):
         self.choice_model = choice_model_ctor(self._user_state.choice_features)
         self._alpha_x_intercept = alpha_x_intercept
         self._alpha_y_intercept = alpha_y_intercept
-
+        
     def is_terminal(self):
-        return self._user_state.time_budget <= 0
+        return self._user_state.current_time_budget <= 0
+    
+    # def is_terminal(self):
+    #     return self._user_state.time_budget <= 0
+
+    # def update_state(self, slate_documents, responses):
+    #     def compute_alpha(x, x_int, y_int):
+    #         return (-y_int / x_int) * np.abs(x) + y_int
+
+    #     user_state = self._user_state
+    #     for doc, response in zip(slate_documents, responses):
+    #         if response.clicked:
+    #             self.choice_model.score_documents(user_state, [doc.create_observation()])
+    #             expected_utility = self.choice_model.scores[0]
+    #             target = doc.features - user_state.user_interests
+    #             mask = doc.features
+    #             alpha = compute_alpha(user_state.user_interests, self._alpha_x_intercept, self._alpha_y_intercept)
+    #             update = alpha * mask * target
+    #             prob = np.dot((user_state.user_interests + 1.0) / 2, mask)
+    #             if np.random.rand(1) < prob:
+    #                 user_state.user_interests += update
+    #             else:
+    #                 user_state.user_interests -= update
+    #             user_state.user_interests = np.clip(user_state.user_interests, -1.0, 1.0)
+
+    #             received_utility = (
+    #                 user_state.user_quality_factor * expected_utility +
+    #                 user_state.document_quality_factor * doc.quality
+    #             )
+    #             user_state.time_budget -= response.watch_time
+    #             user_state.time_budget += (
+    #                 user_state.user_update_alpha * response.watch_time * received_utility
+    #             )
+    #             return
+
+    #     user_state.time_budget -= user_state.step_penalty
 
     def update_state(self, slate_documents, responses):
         def compute_alpha(x, x_int, y_int):
@@ -189,18 +252,29 @@ class IEvUserModel(user.AbstractUserModel):
                 else:
                     user_state.user_interests -= update
                 user_state.user_interests = np.clip(user_state.user_interests, -1.0, 1.0)
-
+                
+                # 核心 watch_time 和 recovered_time 更新
                 received_utility = (
                     user_state.user_quality_factor * expected_utility +
                     user_state.document_quality_factor * doc.quality
                 )
-                user_state.time_budget -= response.watch_time
-                user_state.time_budget += (
+                ### NEW
+                recovered = (
                     user_state.user_update_alpha * response.watch_time * received_utility
                 )
+                user_state.current_time_budget -= response.watch_time
+                
+                # print("Received utility: ", received_utility)
+                # recovered = max(0, user_state.user_update_alpha * response.watch_time * received_utility)
+                # print("Recovered time: ", recovered)
+                user_state.current_time_budget += recovered
+                user_state.recovered_time += recovered
+                user_state.total_watch_time += response.watch_time
+                user_state.time_budget = user_state.current_time_budget
                 return
 
-        user_state.time_budget -= user_state.step_penalty
+        user_state.current_time_budget -= user_state.step_penalty
+        user_state.time_budget = user_state.current_time_budget
 
     def simulate_response(self, documents):
         responses = [self._response_model_ctor() for _ in documents]
@@ -247,7 +321,9 @@ def create_environment(env_config):
     env = environment.Environment(
         user_model,
         document_sampler,
+        # 10 个 doc
         env_config['num_candidates'],
+        # 调2个推荐
         env_config['slate_size'],
         resample_documents=env_config['resample_documents']
     )
