@@ -90,7 +90,7 @@ from bandit import BanditAgentWrapper
 tmp_base_dir = f'./logs/bandit/{MAX_TRAINING_STEPS}_{NUM_ITERATIONS}'
 
 def create_bandit_agent(env):
-    return BanditAgentWrapper(n_arms=env.action_space.nvec[0], epsilon = 0)
+    return BanditAgentWrapper(n_arms=env.action_space.nvec[0])
 
 train_log_dir = os.path.join(tmp_base_dir, 'train')
 eval_log_dir = os.path.join(tmp_base_dir, 'eval')
