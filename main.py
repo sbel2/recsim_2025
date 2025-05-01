@@ -47,8 +47,9 @@ runner_random = Runner(
 )
 
 # --- Run training + evaluation ---
-runner_random.run_training(max_training_steps=100, num_iterations=5000)
+runner_random.run_training(max_training_steps=20000, num_iterations=100)
 runner_random.run_evaluation(max_eval_episodes=5)
+
 
 # %%
 # UCB_Bandit 
@@ -71,7 +72,7 @@ runner_bandit = Runner(
     env=interest_evolution.create_environment(env_config),
 )
 
-runner_bandit.run_training(max_training_steps=100, num_iterations=5000)
+runner_bandit.run_training(max_training_steps=20000, num_iterations=100)
 runner_bandit.run_evaluation(max_eval_episodes=5)
 
 #%%
@@ -150,7 +151,7 @@ runner_cb_doc = Runner(
     env=interest_evolution.create_environment(env_config),
 )
 #%%
-runner_cb_doc.run_training(max_training_steps=100, num_iterations=5000)
+runner_cb_doc.run_training(max_training_steps=20000, num_iterations=100)
 runner_cb_doc.run_evaluation(max_eval_episodes=5)
 #%%
 # USER+DOC
@@ -170,7 +171,7 @@ runner_cb_user_doc = Runner(
     env=interest_evolution.create_environment(env_config),
 )
 #%%
-runner_cb_user_doc.run_training(max_training_steps=100, num_iterations=5000)
+runner_cb_user_doc.run_training(max_training_steps=20000, num_iterations=100)
 runner_cb_user_doc.run_evaluation(max_eval_episodes=5)
 
 #%%

@@ -1,5 +1,5 @@
 #%%
-# %cd /projectnb/vkolagrp/yiliu/hrandomw/project_2/recsim_2025
+# %cd /projectnb/ds543/ysi/recsim_2025
 
 #%%
 import json
@@ -39,25 +39,25 @@ def load_and_smooth_plot(path, label, color, window=200, stride=20):
 # === 配置路径、标签、颜色 ===
 models = [
     {
-        "path": "./logs/random/20000_200/train/plot_data.json",
+        "path": "./logs/random/train/plot_data.json",
         "label": "Random",
         "color": "gray"
     },
     {
-        "path": "./logs/bandit/20000_200/train/plot_data.json",
+        "path": "./logs/UCB_bandit/train/plot_data.json",
         "label": "Bandit",
         "color": "blue"
     },
     {
-        "path": "./logs/Contextual_bandit_DocOnly/20000_200/train/plot_data.json",
+        "path": "./logs/Contextual_bandit_DocOnly/train/plot_data.json",
         "label": "Contextual Bandit (DocOnly)",
         "color": "green"
     },
-    # {
-    #     "path": "./logs/Contextual_bandit_UserDoc/20000_200/train/plot_data.json",
-    #     "label": "Contextual Bandit (User+Doc)",
-    #     "color": "orange"
-    # },
+    {
+        "path": "./logs/Contextual_bandit_UserDoc/train/plot_data.json",
+        "label": "Contextual Bandit (User+Doc)",
+        "color": "orange"
+    }
     # {
     #     "path": "./logs/naive_dqn/20000_200_1/train/plot_data.json",
     #     "label": "Naive DQN",
@@ -83,6 +83,7 @@ plt.title("Training Curve Comparison")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
+plt.savefig("Visualization/bandit_vs_random.png")
 plt.show()
 
 
