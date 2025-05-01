@@ -1,3 +1,4 @@
+#%%
 import os
 import numpy as np
 import shutil
@@ -5,13 +6,12 @@ import torch
 from pathlib import Path
 from runner import Runner
 import interest_evolution
-from bandit import BanditAgentWrapper
-from random_agent import RandomAgent
 
 
 #%%
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
+
 #%% 
 seed = 0
 np.random.seed(seed)
@@ -22,7 +22,49 @@ env_config = {
     'resample_documents': True,
     'seed': seed,
 }
+
 #%%
+from best_policy import BestPolicyAgent
+def create_best_policy_agent(env, **kwargs):
+    obs = env.reset()
+    user_dim = obs['user'].shape[0]
+    
+    # doc is a dict: arm_id -> doc_vec
+    first_doc = next(iter(obs['doc'].values()))
+    doc_dim = first_doc.shape[0]
+    n_arms = len(obs['doc'])
+    slate_size = env_config['slate_size']
+    
+    return BestPolicyAgent(doc_dim=doc_dim, n_arms=n_arms, slate_size=slate_size)
+
+# --- Logging Directories ---
+tmp_base_dir = './logs/best_policy'
+train_log_dir = os.path.join(tmp_base_dir, 'train')
+eval_log_dir = os.path.join(tmp_base_dir, 'eval')
+
+# Clean up old logs
+for log_dir in [train_log_dir, eval_log_dir]:
+    if os.path.exists(log_dir):
+        shutil.rmtree(log_dir)
+Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
+
+# --- Environment ---
+env = interest_evolution.create_environment(env_config)
+
+# --- Runner ---
+runner_best = Runner(
+    base_dir=tmp_base_dir,
+    create_agent_fn=create_best_policy_agent,
+    env=env
+)
+
+# --- Run Training & Evaluation ---
+runner_best.run_training(max_training_steps=20000, num_iterations=100)
+runner_best.run_evaluation(max_eval_episodes=5)
+
+#%%
+from random_agent import RandomAgent
+
 tmp_base_dir = './logs/random'
 
 # Automatically delete train and eval directories if they exist
@@ -47,33 +89,35 @@ runner_random = Runner(
 )
 
 # --- Run training + evaluation ---
-runner_random.run_training(max_training_steps=20000, num_iterations=100)
+runner_random.run_training(max_training_steps=2000, num_iterations=100)
 runner_random.run_evaluation(max_eval_episodes=5)
 
 
 # %%
+from bandit import BanditAgentWrapper
+
 # UCB_Bandit 
 tmp_base_dir = './logs/UCB_bandit'
-def create_bandit_agent(env):
-    return BanditAgentWrapper(n_arms=env.action_space.nvec[0])
+def create_ucb_agent(env, c=1.0):
+    return BanditAgentWrapper(n_arms=env.action_space.nvec[0], c=c)
 
-# Delete and recreate directories
-train_log_dir = os.path.join(tmp_base_dir, 'train')
-eval_log_dir = os.path.join(tmp_base_dir, 'eval')
-for log_dir in [train_log_dir, eval_log_dir]:
-    if os.path.exists(log_dir):
-        shutil.rmtree(log_dir)
-Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
+for c_val in [0.1, 0.5, 1.0, 2.0]:
+    tmp_base_dir = f'./logs/UCB_bandit_c_{c_val}'
+    for log_dir in [os.path.join(tmp_base_dir, 'train'), os.path.join(tmp_base_dir, 'eval')]:
+        if os.path.exists(log_dir):
+            shutil.rmtree(log_dir)
+    Path(tmp_base_dir).mkdir(parents=True, exist_ok=True)
 
-# Run Bandit agent
-runner_bandit = Runner(
-    base_dir=tmp_base_dir,
-    create_agent_fn=create_bandit_agent,
-    env=interest_evolution.create_environment(env_config),
-)
+    runner_ucb = Runner(
+        base_dir=tmp_base_dir,
+        create_agent_fn=lambda env: create_ucb_agent(env, c=c_val),
+        env=interest_evolution.create_environment(env_config),
+    )
 
-runner_bandit.run_training(max_training_steps=20000, num_iterations=100)
-runner_bandit.run_evaluation(max_eval_episodes=5)
+    print(f"\n=== Running UCB Bandit with c = {c_val} ===")
+    runner_ucb.run_training(max_training_steps=2000, num_iterations=100)
+    runner_ucb.run_evaluation(max_eval_episodes=5)
+
 
 #%%
 # from contextual_bandit import ContextualBanditAgent

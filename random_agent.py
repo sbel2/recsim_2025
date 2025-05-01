@@ -8,31 +8,10 @@ class RandomAgent(agent.AbstractEpisodicRecommenderAgent):
     """An agent that recommends a random slate of documents."""
 
     def __init__(self, action_space, random_seed=0):
-        # print("[Agent Init] Action Space: ", action_space)
-        # [Agent Init] Action Space:  MultiDiscrete([10 10])
-        # print("[Agent Init] Slate size: ", action_space.shape) #2 
-        # super(RandomAgent, self).__init__(action_space)
         super().__init__(action_space)
         self._rng = np.random.RandomState(random_seed)
 
     def begin_episode(self, observation):
-        # print("\n[Begin Episode] Observation Keys:", observation.keys())
-        # Observation Keys: dict_keys(['user', 'doc', 'response'])
-        # if 'user' in observation:
-        #     print("[Begin Episode] User State:", observation['user'])
-        #     # [1,7] vectort
-        # if 'doc' in observation:
-        #     print(f"[Begin Episode] Number of Docs: {len(observation['doc'])}")
-        #     doc_obs = observation['doc']
-        #     if isinstance(doc_obs, dict):
-        #         first_key = next(iter(doc_obs))
-        #         print(f"[Begin Episode] One Doc Example (truncated): {doc_obs[first_key]}")
-        #     else:
-        #         print(f"[Begin Episode] Unknown doc format: {type(doc_obs)}")
-        #         # [1*7] vector
-        # if 'response' in observation:
-        #     print("[Begin Episode] Response State:", observation['response'])
-        # break
         return self._sample_random_slate(observation)
 
     def step(self, reward, observation):

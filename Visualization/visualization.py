@@ -39,25 +39,55 @@ def load_and_smooth_plot(path, label, color, window=200, stride=20):
 # === 配置路径、标签、颜色 ===
 models = [
     {
-        "path": "./logs/random/train/plot_data.json",
-        "label": "Random",
-        "color": "gray"
+        "path": "./logs/best_policy/train/plot_data.json",
+        "label": "Best",
+        "color": "purple"
     },
     {
-        "path": "./logs/UCB_bandit/train/plot_data.json",
-        "label": "Bandit",
+        "path": "./logs/best_policy_quality/train/plot_data.json",
+        "label": "Best Quality",
         "color": "blue"
-    },
-    {
-        "path": "./logs/Contextual_bandit_DocOnly/train/plot_data.json",
-        "label": "Contextual Bandit (DocOnly)",
-        "color": "green"
-    },
-    {
-        "path": "./logs/Contextual_bandit_UserDoc/train/plot_data.json",
-        "label": "Contextual Bandit (User+Doc)",
-        "color": "orange"
     }
+    # {
+    #     "path": "./logs/random/train/plot_data.json",
+    #     "label": "Random",
+    #     "color": "gray"
+    # },
+    # {
+    #     "path": "./logs/UCB_bandit_c_0.1/train/plot_data.json",
+    #     "label": "Bandit 0.1",
+    #     "color": "blue"
+    # },
+    # {
+    #     "path": "./logs/UCB_bandit_c_0.5/train/plot_data.json",
+    #     "label": "Bandit 0.5",
+    #     "color": "red"
+    # },
+    # {
+    #     "path": "./logs/UCB_bandit_c_1.0/train/plot_data.json",
+    #     "label": "Bandit 1.0",
+    #     "color": "purple"
+    # },
+    # {
+    #     "path": "./logs/UCB_bandit_c_2.0/train/plot_data.json",
+    #     "label": "Bandit 2.0",
+    #     "color": "green"
+    # },
+    # {
+    #     "path": "./logs/UCB_bandit/train/plot_data.json",
+    #     "label": "Bandit",
+    #     "color": "blue"
+    # },
+    # {
+    #     "path": "./logs/Contextual_bandit_DocOnly/train/plot_data.json",
+    #     "label": "Contextual Bandit (DocOnly)",
+    #     "color": "green"
+    # },
+    # {
+    #     "path": "./logs/Contextual_bandit_UserDoc/train/plot_data.json",
+    #     "label": "Contextual Bandit (User+Doc)",
+    #     "color": "orange"
+    # }
     # {
     #     "path": "./logs/naive_dqn/20000_200_1/train/plot_data.json",
     #     "label": "Naive DQN",

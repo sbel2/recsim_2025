@@ -1,20 +1,25 @@
 import numpy as np
 
-import torch
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-class EpsilonGreedyBandit:
-    def __init__(self, n_arms, epsilon=0.1):
+class UCBBandit:
+    def __init__(self, n_arms, c=1.0):
         self.n_arms = n_arms
-        self.epsilon = epsilon
+        self.c = c
         self.counts = np.zeros(n_arms)
         self.values = np.zeros(n_arms)
+        self.total_pulls = 0
 
     def select_action(self, observation=None):
-        if np.random.rand() < self.epsilon:
-            return np.random.randint(self.n_arms)
-        return np.argmax(self.values)
+        self.total_pulls += 1
+
+        ucb_scores = np.zeros(self.n_arms)
+        for arm in range(self.n_arms):
+            if self.counts[arm] == 0:
+                return arm  # pull untried arms first
+            avg_reward = self.values[arm]
+            confidence = self.c * np.sqrt(np.log(self.total_pulls) / self.counts[arm])
+            ucb_scores[arm] = avg_reward + confidence
+
+        return int(np.argmax(ucb_scores))
 
     def update(self, action, reward):
         self.counts[action] += 1
@@ -23,20 +28,21 @@ class EpsilonGreedyBandit:
         self.values[action] += (reward - value) / n
 
 class BanditAgentWrapper:
-    def __init__(self, n_arms):
-        self.bandit = EpsilonGreedyBandit(n_arms)
+    def __init__(self, n_arms, c=1.0):
+        self.bandit = UCBBandit(n_arms, c)
+        self.last_action = None
 
     def begin_episode(self, observation):
-        action = self.bandit.select_action(observation)
-        return [action]  # assume slate format
+        self.last_action = self.bandit.select_action(observation)
+        return [self.last_action]
 
     def step(self, reward, observation):
-        action = self.bandit.select_action(observation)
-        self.bandit.update(action, reward)
-        return [action]
+        self.bandit.update(self.last_action, reward)
+        self.last_action = self.bandit.select_action(observation)
+        return [self.last_action]
 
     def end_episode(self, reward, observation=None):
-        pass  # bandit doesn't need this
+        self.bandit.update(self.last_action, reward)
 
     def bundle(self):
         return None

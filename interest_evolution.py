@@ -140,7 +140,7 @@ class UtilityModelUserSampler(user.AbstractUserSampler):
     def sample_user(self):
         features = {
             'user_interests': self._rng.uniform(-1.0, 1.0, self.get_user_ctor().NUM_FEATURES),
-            'time_budget': 800.0,
+            'time_budget': 200.0,
             'no_click_mass': self._no_click_mass,
             'step_penalty': 0.5,
             'score_scaling': 0.05,
