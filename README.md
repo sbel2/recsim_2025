@@ -17,6 +17,7 @@ Evironment code files (can be readapted to other simulator projects):
 
 To run code, write in terminal:
 python main.py
+
 Results (e.g., reward curves) are saved to ./logs/ and can be visualized with the provided plotting scripts in Visualization/.
 
 📊 Evaluation Metrics
