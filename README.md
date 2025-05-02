@@ -21,9 +21,9 @@ python main.py
 Results (e.g., reward curves) are saved to ./logs/ and can be visualized with the provided plotting scripts in Visualization/.
 
 📊 Evaluation Metrics
-Total Watch Time: Cumulative engagement across an episode
-Recovered Time: Additional time added back to user budget due to rewarding content
-CTR (optional): If implemented in logging
+- Total Watch Time: Cumulative engagement across an episode
+- Recovered Time: Additional time added back to user budget due to rewarding content
+- CTR (optional): If implemented in logging
 
 📖 Citation
 Built upon concepts from:
